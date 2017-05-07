@@ -17,9 +17,16 @@ let UserSchema = new Schema({
     }
 });
 
+UserSchema.statics.findById  = function (id, cb) {
+  this.find({_id: id}, (err, user) => {
+    cb(err, user);
+  });
+};
 
+UserSchema.statics.findByIdExecAble  = function (id) {
+  return this.find({_id: id});
+};
 
 let User = mongoose.model('User', UserSchema);
-
 
 module.exports = {User};
