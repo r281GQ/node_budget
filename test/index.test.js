@@ -1,12 +1,13 @@
 const expect = require('expect');
 const request = require('supertest');
 
-const {app} = require ('./../index');
-const {User} = require ('./../db/user');
-const {Transaction} = require('./../db/transaction');
+const {app} = require ('./../src/index');
 
-describe('', ()=> {
-    it('hould pass' ,()=> {
+const {User} = require ('./../src/db/user');
+const {Transaction} = require('./../src/db/transaction');
+
+describe('sample', ()=> {
+    it('should pass' ,()=> {
         expect(2).toBe(2);
     });
 });

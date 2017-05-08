@@ -9,8 +9,6 @@ let AccountSchema = new Schema({
   balance: {
     type: Number
   }
-
-
 });
 
 let Account = mongoose.model('Account', AccountSchema);
