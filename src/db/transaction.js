@@ -1,5 +1,8 @@
 const { mongoose } = require('./mongooseConfig');
+const { currencyValidator } = require('./validators');
+const { getRate } = require('./../currency/currency');
 
+const moment = require('moment');
 
 const Schema = mongoose.Schema;
 
@@ -13,58 +16,78 @@ let TransactionSchema = new Schema({
     type: Number,
     required: true,
   },
-  user: {
-    type: mongoose.Schema.Types.ObjectId
-
+  accountAmount: {
+    type: Number
   },
-  account: mongoose.Schema.Types.ObjectId
+  currency: {
+    type: String,
+    validate: {
+      validator: currencyValidator
+    }
+  },
+  date: {
+    type: Date,
+    default: moment
+  },
+  memo: {
+    type: String
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  account: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account'
+  },
+  budget: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Budget'
+  },
+  grouping: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Grouping'
+  }
 });
-
-TransactionSchema.static.findById = function (id) {
-  return this.find({ _id: id });
-};
 
 TransactionSchema.pre('save', function (next) {
+  let transaction = this;
   let Account = mongoose.model('Account');
 
-  let preset = 33;
+  Account.findOne({ _id: transaction.account })
+    .then(account => {
+      if (transaction.grouping.type === 'income')
+        return next();
 
-  Account.findOneAndUpdate({ _id: this.account }, { $set: { balance: preset } }, { new: true })
-    .then(doc => next());
+      return account.mainBalance();
+    })
+    .then(main => {
+      if (main - transaction.amount < 0)
+        return next(new Error('There is not enough balance on that account!'));
+
+      next();
+    });
 });
 
-TransactionSchema.pre('findOneAndUpdate', function (next) {
-  console.log('have been called');
-  next();
-});
 
-
-TransactionSchema.pre('findOneAndUpdate', function (next) {
-  let query = this;
-  let oldTransaction;
-  let oldTransactionGrouping;
-  let conditions = query._conditions;
-  let updates = query._update;
-
+TransactionSchema.pre('remove', function (next) {
+  let transaction = this;
   let Account = mongoose.model('Account');
-  let Grouping = mongoose.model('Grouping');
 
-  Transaction.findOne(conditions).then(transaction => {
-    oldTransaction = transaction;
-    return Grouping.findOne({ _id: transaction.grouping });
-  }).then(grouping => {
+  Account.findOne({ _id: transaction.account })
+    .then(account => {
+      if (transaction.grouping.type === 'expense')
+        return next();
 
-    oldTransactionGrouping = grouping;
-    //account reverse
-    if (oldTransactionGrouping.type === 'income') {
-      return Account.findOneAndUpdate({ _id: oldTransaction.account }, { $inc: { balance: (oldTransaction.amount * -1) } }, { new: true });
-    } else {
-      return Account.findOneAndUpdate({ _id: oldTransaction.account }, { $inc: { balance: (oldTransaction.amount) } }, { new: true });
-    }
-  }).then(account => {
-    next();
-  }).catch(error => console.log(error));
-
+      return account.mainBalance();
+    })
+    .then(main => {
+      console.log('main:' + main);
+      console.log('amount: ' + transaction.amount);
+      if (main - transaction.amount < 0)
+        return next(new Error('Balance is to low to delete that income!'));
+      next();
+    });
 });
 
 let Transaction = mongoose.model('Transaction', TransactionSchema);
