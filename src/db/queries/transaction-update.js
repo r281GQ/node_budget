@@ -1,4 +1,10 @@
-const updateTransction = (_id, transction) => {
+
+
+module.exports = updateTransction = (_id, transction) => {
+    const mongoose = require('./../mongooseConfig');
+
+    let Transaction = mongoose.model('Transaction');
+    
     return new Promise((resolve, reject) => {
         Transaction.findOne({ _id })
             .then(transction => transction.remove())

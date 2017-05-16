@@ -1,3 +1,4 @@
+process.env.NODE_ENV = 'test';
 const { mongoose } = require('./../../src/db/mongooseConfig');
 const { Account } = require('./../../src/db/account');
 const { User } = require('./../../src/db/user');
@@ -6,6 +7,7 @@ const { Grouping } = require('./../../src/db/grouping');
 
 const expect = require('expect');
 const _ = require('lodash');
+
 
 describe('Account', () => {
     beforeEach(done => {
@@ -25,7 +27,6 @@ describe('Account', () => {
     });
 
     it('should persist account to DB', done => {
-
 
         User.findOne({})
             .then(user => {
@@ -120,3 +121,4 @@ describe('Account', () => {
 
     });
 });
+

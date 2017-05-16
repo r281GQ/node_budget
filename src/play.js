@@ -10,62 +10,6 @@ const moment = require('moment');
 
 const _ = require('lodash');
 
-// Promise.all([Budget.remove({}), Account.remove({}), Transaction.remove({}), Grouping.remove({}), User.remove({}), Budget.remove({})])
-//     // .then(() => {
-//     //     let user = new User({
-//     //         name: 'Endre',
-//     //         email: 'endre@mail.com',
-//     //         password: '123'
-//     //     });
-
-//     //     return user.save();
-//     // })
-//     .then(() => {
-//         console.log('db cleared');
-
-//         let user = new User({
-//             name: 'Endre',
-//             email: 'endre@mail.com',
-//             password: '123'
-//         });
-
-
-//         return user.save();
-//     })
-//     .then(() => User.findOne({name: 'Endre'}))
-//     .then(user => {
-//         console.log(user);
-//         user.name = 'newName';
-//         return user.save();
-//     })
-//     .then(() => User.findOne({name: 'newName'}))
-//     .then(user => {
-//         console.log(user);
-//     })
-//     .catch(error => console.log(error));
-
-
-// Promise.all([Budget.remove({}), Account.remove({}), Transaction.remove({}), Grouping.remove({}), User.remove({}), Budget.remove({})])
-// .then(() => {
-//     console.log('db cleared');
-
-//     let user = new User({
-//         name: 'Endre',
-//         email: 'endre@mail.com',
-//         password: '123'
-//     });
-//     return user.save();
-// })
-// .then(() => User.findOne({name: 'Endre'}))
-// .then(user => {
-//     console.log(user);
-//     return User.findOneAndUpdate({name: 'Endre'}, {$set: {name: 'newName'}})
-// })
-// .then(() => User.findOne({name: 'newName'}))
-// .then(user => {
-//     console.log(user);
-// })
-// .catch(error => console.log(error));
 
 Promise.all([Budget.remove({}), Account.remove({}), Transaction.remove({}), Grouping.remove({}), User.remove({}), Budget.remove({})])
     .then(() => {

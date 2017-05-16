@@ -7,6 +7,8 @@ const { Grouping } = require('./../../src/db/grouping');
 const expect = require('expect');
 const _ = require('lodash');
 
+
+
 describe('Grouping', () => {
     beforeEach(done => {
         Promise.all([Account.remove({}), User.remove({}), Grouping.remove({}), Transaction.remove({})])
@@ -38,6 +40,8 @@ describe('Grouping', () => {
                     balance: 100
                 });
 
+                grouping.user = user;
+
                 account.user = user;
 
                 transaction.grouping = grouping;
@@ -57,7 +61,7 @@ describe('Grouping', () => {
             .catch(error => done(error));
     });
 
-    it.only('should remove grouping and all transactions belongs to grouping', done => {
+    it('should remove grouping and all transactions belongs to grouping', done => {
 
         User.findOne({ name: 'Endre' }).then(user => {
             let sampleAccount = new Account({
@@ -71,6 +75,8 @@ describe('Grouping', () => {
                 name: 'flat',
                 type: 'expense'
             });
+
+            sampleGrouping.user = user;
 
             let transaction1 = new Transaction({
                 name: 'rent',
@@ -124,3 +130,4 @@ describe('Grouping', () => {
             .catch(error => done(error));
     });
 });
+

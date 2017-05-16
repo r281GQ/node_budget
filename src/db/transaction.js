@@ -1,6 +1,5 @@
 const { mongoose } = require('./mongooseConfig');
 const { currencyValidator } = require('./validators');
-const { getRate } = require('./../currency/currency');
 
 const moment = require('moment');
 
@@ -16,29 +15,31 @@ let TransactionSchema = new Schema({
     type: Number,
     required: true,
   },
-  accountAmount: {
-    type: Number
-  },
   currency: {
     type: String,
     validate: {
       validator: currencyValidator
-    }
+    },
+    requiered: true,
+    default: 'GBP'
   },
   date: {
     type: Date,
     default: moment
   },
   memo: {
-    type: String
+    type: String,
+    trim: true
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    requiered: true
   },
   account: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Account'
+    ref: 'Account',
+    requiered: true
   },
   budget: {
     type: mongoose.Schema.Types.ObjectId,
@@ -46,7 +47,12 @@ let TransactionSchema = new Schema({
   },
   grouping: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Grouping'
+    ref: 'Grouping',
+    requiered: true
+  },
+  equity: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Equity'
   }
 });
 
@@ -58,17 +64,14 @@ TransactionSchema.pre('save', function (next) {
     .then(account => {
       if (transaction.grouping.type === 'income')
         return next();
-
       return account.mainBalance();
     })
     .then(main => {
       if (main - transaction.amount < 0)
-        return next(new Error('There is not enough balance on that account!'));
-
+        return next(new Error('Account balance is too low!'));
       next();
     });
 });
-
 
 TransactionSchema.pre('remove', function (next) {
   let transaction = this;
@@ -82,10 +85,8 @@ TransactionSchema.pre('remove', function (next) {
       return account.mainBalance();
     })
     .then(main => {
-      console.log('main:' + main);
-      console.log('amount: ' + transaction.amount);
       if (main - transaction.amount < 0)
-        return next(new Error('Balance is to low to delete that income!'));
+        return next(new Error('Account balance is too low!'));
       next();
     });
 });

@@ -101,7 +101,7 @@ describe('Transaction', () => {
             .catch(error => new Promise((resolve, reject) => resolve(error)))
             .then(error => {
 
-                expect(error.message).toBe('There is not enough balance on that account!');
+                expect(error.message).toBe('Account balance is too low!');
                 done();
             });
     });
@@ -169,8 +169,9 @@ describe('Transaction', () => {
                 });
             })
             .then(error => {
-                expect(error.message).toBe('Balance is to low to delete that income!');
+                expect(error.message).toBe('Account balance is too low!');
                 done();
             });
     });
 });
+
