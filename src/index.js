@@ -34,7 +34,42 @@ app.post('/api/signUp', (request, response) => {
         });
 });
 
-app.post('/api/account', (request, response) => {
+const authMiddleWare = (request, response, next) => {
+  let token = request.header('x-auth');
+  jwt.decrypt(token, secret, (retreivedUser, error) => {
+    if(error)
+      return null;
+
+    request.loggedInUser = retreivedUser;
+    next();
+  });
+
+};
+
+
+
+app.post('/api/logIn', (request, response) => {
+  let email = request.body.email;
+  User.findOne({ email })
+    .then(user => {
+      if (user.password === request.body.password) {
+        let userToSend = {
+          name: user.name,
+          email: user.email,
+          _id: user._id
+        };
+        let token = jwt.sign(userToSend, secret);
+        return response.append('x-auth', token).status(200).end();
+      }
+
+      return response.status(401).end();
+    })
+    .catch(() => response.send(404).end());
+});
+
+app.post('/api/account', authMiddleWare, (request, response) => {
+
+
 
     let rawAccount = {
         name: request.body.name,
@@ -109,11 +144,13 @@ app.get('/api/grouping', (req, res) => {
     }
 });
 
-app.get('/api/account', (req, res) => {
+app.get('/api/account', authMiddleWare,(req, res) => {
 
     let accountsToSend;
 
-    Account.find({})
+    let user = req.loggedInUser._id;
+
+    Account.find({ user })
         .sort({ name: 1 })
         .then(accounts => {
             accountsToSend = accounts;
