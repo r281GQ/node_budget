@@ -9,6 +9,7 @@ const { User } = require('./db/user');
 const { Transaction } = require('./db/transaction');
 const { Account } = require('./db/account');
 const { Grouping } = require('./db/grouping');
+const { Budget } = require('./db/budget');
 
 const secret = 'secret';
 
@@ -64,7 +65,7 @@ app.post('/api/logIn', (request, response) => {
 
       return response.status(401).end();
     })
-    .catch(() => response.send(404).end());
+    .catch(() => response.status(404).end());
 });
 
 app.post('/api/account', authMiddleWare, (request, response) => {
@@ -144,6 +145,59 @@ app.get('/api/grouping', (req, res) => {
     }
 });
 
+app.get('/api/transaction', authMiddleWare, (request, response) => {
+  let user  = request.body.loggedInUser;
+
+  let appliableQueries = {};
+
+  if(request.query.filter) {
+
+  }
+
+  Transaction.find({ user: user._id})
+    .then(transactions => {
+      response.status(200).send(transactions);
+    })
+    .catch(error => console.log('error'));
+
+});
+
+app.put('/api/transaction', (request, response) => {
+  let oldTransactionId = request.body._id;
+
+
+//q1: could old id be used?
+  let updatedTransaction = new Transaction({
+    name: request.body.name,
+    account: request.body.account,
+    date: request.body.date,
+    currency: request.body.currency,
+    _id: request.body._id
+  });
+  Transaction.remove({ _id: oldTransactionId})
+    .then(() => return Transaction.save(updateTransction))
+    .then(transaction => Transaction.find({_id: transaction._id}).populate('account grouping budget equity'))
+    .then(transaction => {
+      return new Promise ((resolve, reject) => {
+
+        let clonedTransaction = _.cloneDeep(transaction);
+
+        let cutTransction = _.pick(clonedTransaction, ['name', '_id', 'memo']);
+        let transactionToBeReturned = {
+          equity: _.pick(transaction.equity, ['name, _id']),
+          budget: _.pick(transaction.budget, ['name', '_id']),
+          budgetPeriod: _.pick(transaction.budgetPeriod, ['allowance']),
+          account: _.pick(transaction.account, ['name', '_id'])
+        }
+
+
+        resolve(_.merge(cutTransction, transactionToBeReturned));
+      });
+    })
+    .then(transaction => response.status(200).send(_.pick(transaction))
+    .catch(error => response.status(500).send(error));
+});
+
 app.get('/api/account', authMiddleWare,(req, res) => {
 
     let accountsToSend;
@@ -193,21 +247,39 @@ app.delete('/api/delete', (request, response) => {
         .catch(error => console.log(error));
 });
 
-app.get('/api/account/:id', (request, response) => {
+app.get('/api/account/:id', authMiddleWare, (request, response) => {
 
     let ac;
+
+    let userId = request.loggedInUser._id;
 
     console.log(request.params['id']);
 
     Account.findOne({ _id: request.params['id'] })
         .then(account => {
+            if(account.user !== userId)
+              return response.status(403).end();
+
             ac = account;
             return account.mainBalance();
         })
         .then(balance => {
             response.send(_.extend(_.pick(ac, ['name']), { balance: balance }));
         })
-        .catch(error => console.log(error));
+        .catch(error => response.status(500).end());
+});
+
+
+
+app.get(`/api/budget/:id`, authMiddleWare, (request, response) => {
+  Budget.findOne({_id: request.params['id']})
+    .then(budget => {
+      if(request.body.loggedInUser._id !== budget.user)
+        return response.sendStatus(403);
+
+      return response.status(200).send(_.pick(budget, ['name', 'budgetPeriods']));
+    })
+    .catch(() => response.sendStatus(404));
 });
 
 module.exports = { app };
