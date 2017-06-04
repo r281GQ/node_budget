@@ -1,20 +1,19 @@
-const mongoose = require('./mongooseConfig');
-const _ = require('lodash');
+const { mongoose } = require("./mongooseConfig");
+const _ = require("lodash");
 
-const { currencyValidator } = require('./validators');
-
+const { currencyValidator } = require("./validators");
 
 const Schema = mongoose.Schema;
 
-const Equity = new Schema({
+let EquitySchema = new Schema({
   name: {
     type: String,
-    requiered: true,
+    requiered: true
   },
   type: {
     type: String,
     validate: {
-      validator: type => type === 'asset' || type === 'liability'
+      validator: type => type === "asset" || type === "liability"
     }
   },
   initialBalance: {
@@ -27,25 +26,46 @@ const Equity = new Schema({
     validate: {
       validator: currencyValidator
     }
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 });
 
-Equity.methods.getBalance = function () {
+EquitySchema.methods.bal = function() {
   var equity = this;
   // assume this.type = asset
 
-  let Transaction = mongoose.model('Transaction');
-
-  Transaction.find({equity: equity._id}).populate('grouping equity')
-    .then(transactions => {
-      let sum = _.reduce(transactions, (sum, transaction) => {
-        if((transaction.grouping.type === income && transaction.equity.type === liability) || (transaction.grouping.type === expense && transaction.equity.type === asset))
-          return sum + transaction.amount;
-        else if (transaction.grouping.type === expense && transaction.equity.type === asset || transaction.grouping.type === income && transaction.equity.type === liability)
-          return sum - transaction.amount;
-      }, 0);
-      return sum;
-    })
-    .catch(error => console.log(error));
-
+  let Transaction = mongoose.model("Transaction");
+  return new Promise((resolve, reject) => {
+    Transaction.find({ equity: equity._id })
+      .populate("grouping equity")
+      .then(transactions => {
+        let sum = _.reduce(
+          transactions,
+          (sum, transaction) => {
+            if (
+              (transaction.grouping.type === "income" &&
+                transaction.equity.type === "liability") ||
+              (transaction.grouping.type === "expense" &&
+                transaction.equity.type === "asset")
+            )
+              return sum + transaction.amount;
+            else if (
+              (transaction.grouping.type === "expense" &&
+                transaction.equity.type === "liability") ||
+              (transaction.grouping.type === "income" &&
+                transaction.equity.type === "asset")
+            )
+              return sum - transaction.amount;
+          },
+          0
+        );
+        resolve(equity.initialBalance + sum);
+      })
+      .catch(error => console.log(error));
+  });
 };
+const Equity = mongoose.model("Equity", EquitySchema);
+module.exports = { Equity };

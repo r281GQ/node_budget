@@ -37,14 +37,13 @@ app.post('/api/signUp', (request, response) => {
 
 const authMiddleWare = (request, response, next) => {
   let token = request.header('x-auth');
-  jwt.decrypt(token, secret, (retreivedUser, error) => {
+  jwt.verify(token, secret, ( error,retreivedUser)  => {
     if(error)
-      return null;
-
-    request.loggedInUser = retreivedUser;
+      return response.sendStatus(501);
+      console.log(retreivedUser);
+    request.retreivedUser = retreivedUser;
     next();
   });
-
 };
 
 
@@ -145,8 +144,14 @@ app.get('/api/grouping', (req, res) => {
     }
 });
 
-app.get('/api/transaction', authMiddleWare, (request, response) => {
-  let user  = request.body.loggedInUser;
+app.get('/api/transaction', authMiddleWare,(request, response) => {
+  let { retreivedUser } = request;
+
+  Transaction.find({user: retreivedUser._id}).populate('user account grouping')
+    .then(transactions => {
+      return response.status(200).send(transactions);
+    })
+    .catch(error => response.sendStatus(501));
 
   let appliableQueries = {};
 
@@ -154,11 +159,7 @@ app.get('/api/transaction', authMiddleWare, (request, response) => {
 
   }
 
-  Transaction.find({ user: user._id})
-    .then(transactions => {
-      response.status(200).send(transactions);
-    })
-    .catch(error => console.log('error'));
+
 
 });
 
@@ -175,7 +176,7 @@ app.put('/api/transaction', (request, response) => {
     _id: request.body._id
   });
   Transaction.remove({ _id: oldTransactionId})
-    .then(() => return Transaction.save(updateTransction))
+    .then(() => Transaction.save(updateTransction))
     .then(transaction => Transaction.find({_id: transaction._id}).populate('account grouping budget equity'))
     .then(transaction => {
       return new Promise ((resolve, reject) => {
@@ -195,7 +196,7 @@ app.put('/api/transaction', (request, response) => {
       });
     })
     .then(transaction => response.status(200).send(_.pick(transaction))
-    .catch(error => response.status(500).send(error));
+    .catch(error => response.status(500).send(error)));
 });
 
 app.get('/api/account', authMiddleWare,(req, res) => {
@@ -203,6 +204,8 @@ app.get('/api/account', authMiddleWare,(req, res) => {
     let accountsToSend;
 
     let user = req.loggedInUser._id;
+
+    console.log(user);
 
     Account.find({ user })
         .sort({ name: 1 })

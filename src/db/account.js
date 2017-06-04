@@ -1,5 +1,5 @@
-const { mongoose } = require('./mongooseConfig');
-const _ = require('lodash');
+const { mongoose } = require("./mongooseConfig");
+const _ = require("lodash");
 
 const Schema = mongoose.Schema;
 
@@ -12,25 +12,30 @@ let AccountSchema = new Schema({
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: "User"
   },
   currency: {
     type: String
   }
 });
 
-
-AccountSchema.methods.mainBalance = function () {
+AccountSchema.methods.mainBalance = function() {
   let account = this;
-  let Transaction = mongoose.model('Transaction');
-  let Grouping = mongoose.model('Grouping');
+  let Transaction = mongoose.model("Transaction");
+  let Grouping = mongoose.model("Grouping");
 
   return new Promise((resolve, reject) => {
-    Transaction.find({ account: account }).populate('grouping')
+    Transaction.find({ account: account._id })
+      .populate("grouping")
       .then(transactions => {
-        console.log(transactions);
-        let total = _.reduce(transactions, (sum, transaction) =>
-          (transaction.grouping.type === 'income') ? sum + transaction.amount : sum - transaction.amount, account.balance);
+        let total = _.reduce(
+          transactions,
+          (sum, transaction) =>
+            transaction.grouping.type === "income"
+              ? sum + transaction.amount
+              : sum - transaction.amount,
+          account.balance
+        );
 
         resolve(total);
       })
@@ -38,16 +43,11 @@ AccountSchema.methods.mainBalance = function () {
   });
 };
 
-AccountSchema.pre('findOneAndUpdate', function (next) {
-  let query = this;
-  next();
-});
-
-AccountSchema.pre('remove', function (next) {
-  let Transaction = mongoose.model('Transaction');
+AccountSchema.pre("remove", function(next) {
+  let Transaction = mongoose.model("Transaction");
   Transaction.remove({ account: this._id }).then(() => next());
 });
 
-let Account = mongoose.model('Account', AccountSchema);
+let Account = mongoose.model("Account", AccountSchema);
 
 module.exports = { Account };

@@ -10,7 +10,7 @@ const moment = require('moment');
 
 const _ = require('lodash');
 
-_.cloneDeep(moment)
+_.cloneDeep(moment);
 
 
 Promise.all([Budget.remove({}), Account.remove({}), Transaction.remove({}), Grouping.remove({}), User.remove({}), Budget.remove({})])

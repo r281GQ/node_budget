@@ -8,19 +8,18 @@ const Schema = mongoose.Schema;
 let TransactionSchema = new Schema({
   name: {
     type: String,
-    requiered: true,
+
     trim: true
   },
   amount: {
     type: Number,
-    required: true,
+
   },
   currency: {
     type: String,
     validate: {
       validator: currencyValidator
     },
-    requiered: true,
     default: 'GBP'
   },
   date: {
@@ -34,12 +33,12 @@ let TransactionSchema = new Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    requiered: true
+
   },
   account: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Account',
-    requiered: true
+
   },
   budget: {
     type: mongoose.Schema.Types.ObjectId,
@@ -48,7 +47,7 @@ let TransactionSchema = new Schema({
   grouping: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Grouping',
-    requiered: true
+
   },
   equity: {
     type: mongoose.Schema.Types.ObjectId,
@@ -58,27 +57,55 @@ let TransactionSchema = new Schema({
 
 TransactionSchema.pre('save', function (next) {
   let transaction = this;
+  // console.log(transaction);
   let Account = mongoose.model('Account');
+  // console.log(Account);
+  // next();
 
-  Account.findOne({ _id: transaction.account })
+
+  // Account.findOne({})
+  //   .then(account => {
+  //     console.log('from pre hook save', account);
+  //     next();
+  //   })
+  //   .catch(error => console.log(error));
+
+  Account.findOne({ _id: transaction.account._id })
     .then(account => {
+      // console.log('account from hook', account);
       if (transaction.grouping.type === 'income')
         return next();
       return account.mainBalance();
     })
     .then(main => {
-      if (main - transaction.amount < 0)
-        return next(new Error('Account balance is too low!'));
+      // console.log('BALANCE IS',main);
+      // if (main - transaction.amount < 0)
+      //   return next(new Error('Account balance is too low!'));
+      //   console.log('passed the stuff');
       next();
     });
 });
 
+
+
+
+
+
+
+
+//
+//
+//
+//
+//
+//
 TransactionSchema.pre('remove', function (next) {
   let transaction = this;
   let Account = mongoose.model('Account');
 
-  Account.findOne({ _id: transaction.account })
+  Account.findOne({ _id: transaction.account._id })
     .then(account => {
+      // console.log('account from remove', account);
       if (transaction.grouping.type === 'expense')
         return next();
 
@@ -90,6 +117,10 @@ TransactionSchema.pre('remove', function (next) {
       next();
     });
 });
+
+
+
+
 
 let Transaction = mongoose.model('Transaction', TransactionSchema);
 
