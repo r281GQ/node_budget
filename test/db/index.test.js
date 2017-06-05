@@ -93,6 +93,46 @@ describe.only("endpoints", () => {
       });
   });
 
+
+  it("transaction/create", done => {
+    Transaction.findOne({})
+    .then(transaction => {
+      request(app)
+        .post('/api/logIn')
+        .set('Content-Type', 'application/json')
+        .send({
+          email: 'endre@mail.com',
+          password: '123456'
+        })
+        .end((err, response) => {
+          let token = response.headers['x-auth'];
+          request(app)
+            .post('/api/transaction')
+            .set('x-auth', token)
+            .set('Accept', 'application/json')
+            .send({
+              // _id: transaction._id,
+              account: transaction.account,
+              grouping: transaction.grouping,
+              name: 'created  Transaction from rest api',
+              amount: 900
+            })
+            .expect(409)
+            .expect(res => {
+              // console.log(res);
+              console.log(res.body);
+              // expect(res.body._id).toBe(transaction._id.toString());
+              // expect(res.body.user).toBe(transaction.user.toString());
+            })
+            .end(done);
+        });
+    })
+    .catch(error => {
+      console.log(error);
+      done(error);
+    });
+  });
+
   it("transaction/put", (done) => {
     Transaction.findOne({})
     .then(transaction => {
@@ -129,6 +169,47 @@ describe.only("endpoints", () => {
       done(error);
     });
   });
+
+
+  it("transaction/delete", (done) => {
+    Transaction.findOne({})
+    .then(transaction => {
+      request(app)
+        .post('/api/logIn')
+        .set('Content-Type', 'application/json')
+        .send({
+          email: 'endre@mail.com',
+          password: '123456'
+        })
+        .end((err, response) => {
+          let token = response.headers['x-auth'];
+          request(app)
+            .delete(`/api/transaction/${transaction._id}`)
+            .set('x-auth', token)
+            .set('Accept', 'application/json')
+            // .send({
+            //   _id: transaction._id,
+            //   account: transaction.account,
+            //   grouping: transaction.grouping,
+            //   name: 'Updated Transaction',
+            //   amount: 90
+            // })
+            .expect(200)
+            .expect(res => {
+              Transaction.findOne({})
+                .then(tx => console.log('tx from db after deletion: ' , tx));
+            })
+            .end(done);
+        });
+    })
+    .catch(error => {
+      console.log(error);
+      done(error);
+    });
+  });
+
+
+
 
 
   it("account/delete", (done) => {
@@ -183,7 +264,7 @@ describe.only("endpoints", () => {
             .set('Accept', 'application/json')
             .expect(200)
             .expect(res => {
-              console.log(res.body);
+              // console.log(res.body);
               expect(res.body.name).toBe('main');
             })
             .end(done);
@@ -195,6 +276,68 @@ describe.only("endpoints", () => {
     });
   });
 
+
+  it("account/put", (done) => {
+    Account.findOne({})
+    .then(account => {
+      request(app)
+        .post('/api/logIn')
+        .set('Content-Type', 'application/json')
+        .send({
+          email: 'endre@mail.com',
+          password: '123456'
+        })
+        .end((err, response) => {
+          let token = response.headers['x-auth'];
+          request(app)
+            .put(`/api/account`)
+            .set('x-auth', token)
+            .set('Accept', 'application/json')
+            .send({
+              _id: account._id,
+              name: 'side'
+            })
+            .expect(200)
+            .expect(res => {
+              console.log(res.body);
+              expect(res.body.name).toBe('side');
+            })
+            .end(done);
+        });
+    })
+    .catch(error => {
+      console.log(error);
+      done(error);
+    });
+  });
+
+
+  it("account/create", (done) => {
+      request(app)
+        .post('/api/logIn')
+        .set('Content-Type', 'application/json')
+        .send({
+          email: 'endre@mail.com',
+          password: '123456'
+        })
+        .end((err, response) => {
+          let token = response.headers['x-auth'];
+          request(app)
+            .post(`/api/account`)
+            .set('x-auth', token)
+            .set('Accept', 'application/json')
+            .send({
+              name: 'new Account',
+              balance: 300
+            })
+            .expect(201)
+            .expect(res => {
+              console.log(res.body);
+              expect(res.body.name).toBe('new Account');
+            })
+            .end(done);
+        });
+  });
 
 
     afterEach(done => {

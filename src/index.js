@@ -80,8 +80,13 @@ app.post("/api/account", authMiddleWare, (request, response) => {
 
   account
     .save()
-    .then(() => {
-      response.send(_.pick(account, ["name", "_id"]));
+    .then((ac) => {
+      return ac.mainBalance();
+    })
+    .then(main => {
+      let r = _.pick(account, ["name", "_id", "balance"]);
+      r.main = main;
+      response.status(201).send(r);
     })
     .catch(error => console.log(error));
 });
@@ -227,24 +232,82 @@ app.get("/api/account", authMiddleWare, (req, res) => {
     .catch(error => console.log(error));
 });
 
-app.put("/api/account", (request, response) => {
-  let _id = request.body.id;
-
-  let name = request.body.name;
+app.put("/api/account", authMiddleWare, (request, response) => {
+  // let _id = request.body.id;
+  //
+  // let name = request.body.name;
 
   let accountToBeSent;
 
-  Account.findOneAndUpdate({ _id }, { $set: { name } }, { new: true })
+  Account.findOne( {_id: request.body._id})
+    .then(account => {
+
+      if(account.user.toString()!== request.loggedInUser._id)
+        return response.sendStatus(403);
+
+      return Account.findOneAndUpdate({ _id: account._id }, { $set: { name: request.body.name } }, { new: true });
+
+    })
     .then(account => {
       accountToBeSent = account;
       return account.mainBalance();
     })
     .then(mainBalance => {
       response.send(
-        _.extend(_.pick(accountToBeSent, ["name"], { balance: mainBalance }))
-      );
+        _.extend(_.pick(accountToBeSent, ["name", "_id"]), { balance: mainBalance }));
     })
     .catch(error => console.log(error));
+
+  // Account.findOneAndUpdate({ _id }, { $set: { name } }, { new: true })
+  //   .then(account => {
+  //     accountToBeSent = account;
+  //     return account.mainBalance();
+  //   })
+  //   .then(mainBalance => {
+  //     response.send(
+  //       _.extend(_.pick(accountToBeSent, ["name"], { balance: mainBalance }))
+  //     );
+  //   })
+  //   .catch(error => console.log(error));
+});
+
+app.post("/api/transaction", authMiddleWare, (request, response) => {
+
+
+  let tx = new Transaction({
+    name: request.body.name,
+    amount: request.body.amount
+  });
+  tx.user = request.loggedInUser._id;
+  tx.account = request.body.account;
+  tx.grouping = request.body.grouping;
+
+  tx.save()
+    .then(tx => {
+      return response.status(201).send(tx);
+
+    })
+    .catch((err) => {
+      // console.log(err);
+      if(err.message === 'Account balance is too low!')
+        return response.status(409).send({message: err.message});
+      return response.sendStatus(500);
+    })
+
+});
+
+app.delete("/api/transaction/:id", authMiddleWare, (request, response) => {
+
+  Transaction.findOne({ _id: request.params['id']})
+    .then(transaction => {
+      if(transaction.user.toString() !== request.loggedInUser._id)
+        return response.sendStatus(403);
+      return transaction.remove();
+    })
+    .then(() => {
+      return response.sendStatus(200);
+    })
+    .catch(error => response.sendStatus(500));
 });
 
 app.delete("/api/account/:id", authMiddleWare, (request, response) => {
