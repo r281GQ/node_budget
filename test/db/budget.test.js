@@ -4,7 +4,7 @@ const { Transaction } = require('./../../src/db/transaction');
 const { Account } = require('./../../src/db/account');
 const { Grouping } = require('./../../src/db/grouping');
 const { User } = require('./../../src/db/user');
-const { Budget } = require('./../../src/db/budget');
+const { Budget , Equity} = require('./../../src/db/models');
 
 const expect = require('expect');
 const moment = require('moment');
@@ -13,6 +13,19 @@ const _ = require('lodash');
 
 
 describe('Budget', () => {
+
+  afterEach(done => {
+    Transaction.remove({})
+    .then(() =>   Promise.all([
+        Account.remove({}),
+        Grouping.remove({}),
+        Equity.remove({}),
+        Budget.remove({}),
+        User.remove({})
+      ]))
+    .then(() => done())
+    .catch(error => done(error));
+  });
     beforeEach(done => {
         Promise.all([Budget.remove({}), Account.remove({}), Transaction.remove({}), Grouping.remove({}), User.remove({})])
             .then(() => {
@@ -174,4 +187,3 @@ describe('Budget', () => {
             .catch(error => done(error));
     });
 });
-

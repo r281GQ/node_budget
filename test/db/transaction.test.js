@@ -3,7 +3,8 @@ const { mongoose } = require('./../../src/db/mongooseConfig');
 const { Transaction } = require('./../../src/db/transaction');
 const { Account } = require('./../../src/db/account');
 const { Grouping } = require('./../../src/db/grouping');
-const { User } = require('./../../src/db/user');
+const { User, Equity, Budget } = require('./../../src/db/models');
+
 
 const expect = require('expect');
 const _ = require('lodash');
@@ -173,5 +174,17 @@ describe('Transaction', () => {
                 done();
             });
     });
-});
 
+    afterEach(done => {
+      Transaction.remove({})
+      .then(() =>   Promise.all([
+          Account.remove({}),
+          Grouping.remove({}),
+          Equity.remove({}),
+          Budget.remove({}),
+          User.remove({})
+        ]))
+      .then(() => done())
+      .catch(error => done(error));
+    });
+});

@@ -1,50 +1,48 @@
-const { mongoose } = require('./../../src/db/mongooseConfig');
-const { User } = require('./../../src/db/user');
+const { mongoose } = require("./../../src/db/mongooseConfig");
+const { User } = require("./../../src/db/user");
 
-const expect = require('expect');
-const _ = require('lodash');
+const expect = require("expect");
+const _ = require("lodash");
 
-
-
-describe('User', () => {
+describe("User", () => {
   beforeEach(done => {
-    User.remove({})
-      .then(() => done())
-      .catch(error => console.log(error));
+    User.remove({}).then(() => done()).catch(error => console.log(error));
   });
 
-  it('should be persisted to database', done => {
+  it("should be persisted to database", done => {
     let user = new User({
-      name: 'Endre',
-      email: 'mail',
-      password: '123456'
+      name: "Endre",
+      email: "mail",
+      password: "123456"
     });
 
-    user.save()
+    user
+      .save()
       .then(user => {
         console.log(user);
         User.find({}).then(users => {
           expect(users.length).toBe(1);
           done();
-        })
+        });
       })
       .catch(error => {
         done(error);
       });
   });
 
-  it('should be able to retrieve from db', done => {
+  it("should be able to retrieve from db", done => {
     let user = new User({
-      name: 'Endre',
-      email: 'mail',
-      password: '123456'
+      name: "Endre",
+      email: "mail",
+      password: "123456"
     });
-    user.save()
+    user
+      .save()
       .then(() => {
-        return User.findOne({ name: 'Endre' });
+        return User.findOne({ name: "Endre" });
       })
       .then(user => {
-        expect(user.email).toBe('mail');
+        expect(user.email).toBe("mail");
         done();
       })
       .catch(error => {
@@ -52,15 +50,16 @@ describe('User', () => {
       });
   });
 
-  it('should delete existing document', () => {
+  it("should delete existing document", () => {
     let user = new User({
-      name: 'Endre',
-      email: 'mail',
-      password: '123456'
+      name: "Endre",
+      email: "mail",
+      password: "123456"
     });
-    user.save()
+    user
+      .save()
       .then(() => {
-        return User.remove({ name: 'Endre' });
+        return User.remove({ name: "Endre" });
       })
       .then(() => User.find({}))
       .then(users => {
@@ -72,5 +71,3 @@ describe('User', () => {
       });
   });
 });
-
-
