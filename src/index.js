@@ -10,6 +10,7 @@ const { Transaction } = require("./db/transaction");
 const { Account } = require("./db/account");
 const { Grouping } = require("./db/grouping");
 const { Budget } = require("./db/budget");
+const { Equity } = require("./db/models");
 
 const secret = "secret";
 
@@ -114,6 +115,53 @@ app.post("/api/grouping", authMiddleWare,  (request, response) => {
       response.status(201).send(_.pick(gr, ["name", "type", "_id"]));
     })
     .catch(error => console.log(error));
+});
+
+app.put('/api/equities', authMiddleWare, (req, res) => {
+
+let { _id, name, initialBalance } = req.body;
+let userID = req.loggedInUser._id;
+
+let eqBe;
+
+Equity.findOneAndUpdate({ _id }, {$set: {name, initialBalance}}, {new: true})
+
+  .then(eq => {
+    eqBe = eq;
+    return eq.bal();
+  })
+  .then(balance => {
+    console.log(balance);
+    let tosend = _.pick(eqBe, ['name', '_id', 'user', 'initialBalance','type', 'currency']);
+    tosend.currentBalance = balance;
+    res.status(200).send(tosend);
+  })
+  .catch(error => {});
+
+
+
+});
+
+app.post('/api/equities', authMiddleWare, (req, res) => {
+  let { name, type, initialBalance, currency } = req.body;
+  // console.log(name, type);
+  let equity = new Equity({
+    name,
+    type,
+    initialBalance,
+    currency
+  });
+
+  equity.user = req.loggedInUser._id;
+// console.log('equity');
+  equity.save()
+    .then(eq => res.status(201).send(eq))
+    .catch(error => {
+      if(_.includes(error.message, 'Equity validation failed'))
+        return res.status(409).send({message: 'field validation failed'});
+
+      return res.sendStatus(500);
+    });
 });
 
 app.get("/api/grouping/:id", authMiddleWare,  (req, res) => {

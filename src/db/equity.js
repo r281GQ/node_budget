@@ -8,7 +8,7 @@ const Schema = mongoose.Schema;
 let EquitySchema = new Schema({
   name: {
     type: String,
-    requiered: true
+    required: true
   },
   type: {
     type: String,
@@ -17,12 +17,13 @@ let EquitySchema = new Schema({
     }
   },
   initialBalance: {
-    type: Number,
-    requiered: true,
-    default: 0
+    default: 0,
+    
+    type: Number
   },
   currency: {
     type: String,
+    default: 'GBP',
     validate: {
       validator: currencyValidator
     }

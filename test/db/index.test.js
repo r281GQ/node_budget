@@ -54,7 +54,7 @@ describe.only("endpoints", () => {
               equity.save(),
             ]);
           })
-      .then(() => Promise.all([User.findOne({}), Account.findOne({}), Grouping.findOne({})]))
+      .then(() => Promise.all([User.findOne({}), Account.findOne({}), Grouping.findOne({}), Equity.findOne({})]))
       .then(dependencies => {
         let tx = new Transaction({
           name: "test",
@@ -67,6 +67,8 @@ describe.only("endpoints", () => {
         accountG = dependencies[1];
         tx.grouping = dependencies[2];
         groupingG =dependencies[2];
+        equityG = dependencies[3];
+        // tx.equity = equityG;
         return tx.save();
       })
       .then(() => {
@@ -100,7 +102,7 @@ describe.only("endpoints", () => {
       });
   });
 
-it.only('grouping get', done => {
+it('grouping get', done => {
 
   request(app)
     .post('/api/logIn')
@@ -259,6 +261,71 @@ it.only('grouping get', done => {
     //       })
     //       .end(done);
     //   });
+  });
+
+
+  it('eq/create', done => {
+    request(app)
+      .post('/api/logIn')
+      .set('Content-Type', 'application/json')
+      .send({
+        email: 'endre@mail.com',
+        password: '123456'
+      })
+      .end((err, response) => {
+        let token = response.headers['x-auth'];
+        request(app)
+          .post('/api/equities')
+          .set('x-auth', token)
+          .set('Accept', 'application/json')
+          .send({
+
+            name: 'debt',
+            type: 'liability',
+            currency: 'GBP',
+            initialBalance: 1000
+          })
+          .expect(201)
+          .expect(res => {
+            // console.log(res);
+            console.log(res.body);
+            // expect(res.body._id).toBe(transaction._id.toString());
+            // expect(res.body.user).toBe(transaction.user.toString());
+          })
+          .end(done);
+      });
+  });
+
+  it.only('eq/put', done => {
+    request(app)
+      .post('/api/logIn')
+      .set('Content-Type', 'application/json')
+      .send({
+        email: 'endre@mail.com',
+        password: '123456'
+      })
+      .end((err, response) => {
+        let token = response.headers['x-auth'];
+        request(app)
+          .put('/api/equities')
+          .set('x-auth', token)
+          .set('Accept', 'application/json')
+          .send({
+            _id: equityG._id,
+            name: 'debt',
+            type: 'liability',
+            currency: 'GBP',
+            initialBalance: 2000
+          })
+          .expect(200)
+          .expect(res => {
+            // console.log(res);
+            console.log(res.body);
+            // expect(res.body._id).toBe(transaction._id.toString());
+            // expect(res.body.user).toBe(transaction.user.toString());
+          })
+          .end(done);
+      });
   });
 
   it('grouping/create', done => {
