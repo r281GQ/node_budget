@@ -12,6 +12,8 @@ const {
   Grouping
 } = require("./../../src/db/models");
 
+let userG, accountG, groupingG, equityG;
+
 describe.only("endpoints", () => {
   beforeEach(done => {
           let user = new User({
@@ -21,6 +23,7 @@ describe.only("endpoints", () => {
           });
            user.save()
           .then(user => {
+            userG = user;
             let account = new Account({
               name: "main",
               balance: 100,
@@ -61,10 +64,14 @@ describe.only("endpoints", () => {
         });
         tx.user = dependencies[0];
         tx.account = dependencies[1];
+        accountG = dependencies[1];
         tx.grouping = dependencies[2];
+        groupingG =dependencies[2];
         return tx.save();
       })
-      .then(() => done())
+      .then(() => {
+        done();
+      } )
       .catch(error => {
         console.log('error happened: ', error);
         done(error);
@@ -93,6 +100,195 @@ describe.only("endpoints", () => {
       });
   });
 
+it.only('grouping get', done => {
+
+  request(app)
+    .post('/api/logIn')
+    .set('Content-Type', 'application/json')
+    .send({
+      email: 'endre@mail.com',
+      password: '123456'
+    })
+    .end((err, response) => {
+
+      let token = response.headers['x-auth'];
+
+      request(app)
+        .get(`/api/grouping/${groupingG._id}`)
+        .set('x-auth', token)
+        .set('Accept', 'application/json')
+        .expect(res => {
+          console.log(res.body);
+          expect(res.body.name).toBe('rent');
+        })
+        .end(done);
+     });
+});
+
+  it("transaction/create ok", done => {
+    Transaction.findOne({})
+    .then(transaction => {
+      request(app)
+        .post('/api/logIn')
+        .set('Content-Type', 'application/json')
+        .send({
+          email: 'endre@mail.com',
+          password: '123456'
+        })
+        .end((err, response) => {
+          let token = response.headers['x-auth'];
+          request(app)
+            .post('/api/transaction')
+            .set('x-auth', token)
+            .set('Accept', 'application/json')
+            .send({
+              // _id: transaction._id,
+              account: transaction.account,
+              grouping: transaction.grouping,
+              name: 'created  Transaction from rest api',
+              amount: 9
+            })
+            .expect(201)
+            .expect(res => {
+              // console.log(res);
+              console.log(res.body);
+              // expect(res.body._id).toBe(transaction._id.toString());
+              // expect(res.body.user).toBe(transaction.user.toString());
+            })
+            .end(done);
+        });
+    })
+    .catch(error => {
+      console.log(error);
+      done(error);
+    });
+  });
+
+
+
+  xit('grouping/remove un', done => {
+    // console.log('this is user G: ', userG);
+    // User.findOne({})
+      // .then(user => {
+        let gr = new Grouping({
+          name: 'salary',
+          type: 'income'
+        });
+
+        gr.user = userG;
+        gr.save()
+        // .then(()=> Grouping.findOne({name: 'salary'}))
+          .then(gr => {
+            // console.log('GGGRR', gr);
+            let t = new Transaction({
+              name: 'sla',
+              amount: 200
+            });
+            t.user = userG;
+            t.account = accountG;
+            t.grouping = gr;
+            return t.save();
+          })
+          .then((r)=>{
+            // console.log('newly created', r);
+            let texp = new Transaction({
+              name: 'cru',
+              amount: 210
+            });
+            // console.log(accountG);
+            texp.user = userG;
+            texp.account = accountG;
+            texp.grouping = groupingG;
+            // console.log('gggggggg', groupingG);
+            return texp.save();
+          })
+          .then(() => {
+            return Account.findOne({});
+          })
+          .then(accoint => accoint.mainBalance())
+
+          .then((main) => {
+            console.log(main);
+            return Grouping.findOne({name: 'salary'});
+          })
+          .then(gr => gr.remove())
+          // .then(() => {
+          //   return Account.findOne({});
+          // })
+          // .then(accoint => accoint.mainBalance())
+          //
+          // .then((main) => {
+          //   console.log(main);
+          //   return Grouping.findOne({name: 'salary'});
+          // })
+          .then(() => {
+            done();
+          })
+          .catch(err => {
+            console.log(err);
+            done(err);
+          });
+      // })
+      // .then(gr => {
+      //   let
+      // });
+
+    // request(app)
+    //   .post('/api/logIn')
+    //   .set('Content-Type', 'application/json')
+    //   .send({
+    //     email: 'endre@mail.com',
+    //     password: '123456'
+    //   })
+    //   .end((err, response) => {
+    //     let token = response.headers['x-auth'];
+    //     request(app)
+    //       .post('/api/grouping')
+    //       .set('x-auth', token)
+    //       .set('Accept', 'application/json')
+    //       .send({
+    //         name: 'salary',
+    //         type: 'income'
+    //       })
+    //       .expect(201)
+    //       .expect(res => {
+    //         // console.log(res);
+    //         console.log(res.body);
+    //         // expect(res.body._id).toBe(transaction._id.toString());
+    //         // expect(res.body.user).toBe(transaction.user.toString());
+    //       })
+    //       .end(done);
+    //   });
+  });
+
+  it('grouping/create', done => {
+    request(app)
+      .post('/api/logIn')
+      .set('Content-Type', 'application/json')
+      .send({
+        email: 'endre@mail.com',
+        password: '123456'
+      })
+      .end((err, response) => {
+        let token = response.headers['x-auth'];
+        request(app)
+          .post('/api/grouping')
+          .set('x-auth', token)
+          .set('Accept', 'application/json')
+          .send({
+            name: 'salary',
+            type: 'income'
+          })
+          .expect(201)
+          .expect(res => {
+            // console.log(res);
+            console.log(res.body);
+            // expect(res.body._id).toBe(transaction._id.toString());
+            // expect(res.body.user).toBe(transaction.user.toString());
+          })
+          .end(done);
+      });
+  });
 
   it("transaction/create", done => {
     Transaction.findOne({})

@@ -24,6 +24,32 @@ AccountSchema.methods.mainBalance = function() {
   let Transaction = mongoose.model("Transaction");
   let Grouping = mongoose.model("Grouping");
 
+  // console.log('IIIIDDD',account._id, account.balance);
+
+  // return new Promise((resolve, reject) => {
+  //   Transaction.find({ account: account })
+  //     .populate("grouping")
+  //     .then(transactions => {
+  //       // if(transactions.length === 0)
+  //       // return resolve(account.balance);
+  //       console.log('inside mainbalance: ',transactions);
+  //       let total = _.reduce(
+  //         transactions,
+  //         (sum, transaction) => {
+  //           // console.log(sum, transaction);
+  //           return transaction.grouping.type === "income"
+  //             ? sum + transaction.amount
+  //             : sum - transaction.amount;
+  //         }
+  //           ,
+  //         account.balance
+  //       );
+  //       // console.log(total);
+  //       resolve(total);
+  //     })
+  //     .catch(error => {console.log(error);reject(error);} );
+  // });
+
   return new Promise((resolve, reject) => {
     Transaction.find({ account: account._id })
       .populate("grouping")
@@ -36,7 +62,7 @@ AccountSchema.methods.mainBalance = function() {
               : sum - transaction.amount,
           account.balance
         );
-
+        // console.log(total);
         resolve(total);
       })
       .catch(error => reject(error));

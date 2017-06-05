@@ -61,11 +61,13 @@ TransactionSchema.pre('save', function (next) {
 
   Account.findOne({ _id: transaction.account })
     .then(account => {
+      // console.log(account);
       if (transaction.grouping.type === 'income')
         return next();
       return account.mainBalance();
     })
     .then(main => {
+      // console.log(main, transaction.amount);
       if (main - transaction.amount < 0)
         return next(new Error('Account balance is too low!'));
       next();

@@ -18,9 +18,9 @@ let UserSchema = new Schema({
     }
 });
 
-UserSchema.statics.findById = function (_id) {
-    return this.find({ _id: _id });
-};
+// UserSchema.statics.findById = function (_id) {
+//     return this.find({ _id: _id });
+// };
 
 let User = mongoose.model('User', UserSchema);
 

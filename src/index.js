@@ -91,65 +91,74 @@ app.post("/api/account", authMiddleWare, (request, response) => {
     .catch(error => console.log(error));
 });
 
-app.post("/api/grouping", (request, response) => {
-  let rawGrouping = {
-    name: request.body.name,
-    type: request.body.type
-  };
+app.post("/api/grouping", authMiddleWare,  (request, response) => {
+  // let rawGrouping = {
+  //   name: request.body.name,
+  //   type: request.body.type
+  // };
 
-  let dependencies = {
-    user: request.user
-  };
+  // let dependencies = {
+  //   user: request.user
+  // };
 
   let grouping = new Grouping({
-    name: rawGrouping.name,
-    type: rawGrouping.type
+    name: request.body.name,
+    type: request.body.type
   });
 
-  grouping = dependencies.user;
+  grouping.user = request.loggedInUser._id;
 
   grouping
     .save()
-    .then(() => {
-      response.send(_.pick(grouping, ["name", "type", "_id"]));
+    .then((gr) => {
+      response.status(201).send(_.pick(gr, ["name", "type", "_id"]));
     })
     .catch(error => console.log(error));
 });
 
-app.get("/api/grouping", (req, res) => {
+app.get("/api/grouping/:id", authMiddleWare,  (req, res) => {
   let accountsToSend;
 
-  if (req.query.listTransactions && req.query.listTransactions === "true") {
-    Promise.all([
-      Grouping.find({}).sort({ name: 1 }),
-      Transaction.find({}).populate("grouping")
-    ])
-      .then(datas => {
-        let groupings = datas[0];
-        let transactions = datas[1];
-        res.send(
-          _.map(groupings, grouping => {
-            return _.extend({}, _.pick(grouping, ["name", "type", "_id"]), {
-              transatcion: _.filter(transactions, tx =>
-                tx.grouping._id.equals(grouping._id)
-              )
-            });
-          })
-        );
-      })
-      .catch(error => console.log(error));
-  } else {
-    Grouping.find({})
-      .sort({ name: 1 })
-      .then(groupings =>
-        res.send(
-          _.map(groupings, grouping =>
-            _.pick(grouping, ["name", "type", "_id"])
-          )
-        )
-      )
-      .catch(error => console.log(error));
-  }
+  Grouping.findOne({_id: req.params['id']})
+    .then(gr => {
+      if(!gr.user.equals(req.loggedInUser._id))
+        return res.sendStatus(403);
+
+      return res.status(200).send(gr);
+    })
+    .catch(error => res.sendStatus(500));
+
+  // if (req.query.listTransactions && req.query.listTransactions === "true") {
+  //   Promise.all([
+  //     Grouping.find({}).sort({ name: 1 }),
+  //     Transaction.find({}).populate("grouping")
+  //   ])
+  //     .then(datas => {
+  //       let groupings = datas[0];
+  //       let transactions = datas[1];
+  //       res.send(
+  //         _.map(groupings, grouping => {
+  //           return _.extend({}, _.pick(grouping, ["name", "type", "_id"]), {
+  //             transatcion: _.filter(transactions, tx =>
+  //               tx.grouping._id.equals(grouping._id)
+  //             )
+  //           });
+  //         })
+  //       );
+  //     })
+  //     .catch(error => console.log(error));
+  // } else {
+  //   Grouping.find({})
+  //     .sort({ name: 1 })
+  //     .then(groupings =>
+  //       res.send(
+  //         _.map(groupings, grouping =>
+  //           _.pick(grouping, ["name", "type", "_id"])
+  //         )
+  //       )
+  //     )
+  //     .catch(error => console.log(error));
+  // }
 });
 
 app.get("/api/transaction", authMiddleWare, (request, response) => {
@@ -289,7 +298,9 @@ app.post("/api/transaction", authMiddleWare, (request, response) => {
     })
     .catch((err) => {
       // console.log(err);
-      if(err.message === 'Account balance is too low!')
+
+      // if(err.message === 'Account balance is too low!')
+      if(_.includes(err.message, 'Account balance is too low!'))
         return response.status(409).send({message: err.message});
       return response.sendStatus(500);
     })
