@@ -64,7 +64,7 @@ TransactionSchema.pre('save', function (next) {
       // console.log(account);
       if (transaction.grouping.type === 'income')
         return next();
-      return account.mainBalance();
+      return account.currentBalance();
     })
     .then(main => {
       // console.log(main, transaction.amount);
@@ -82,7 +82,7 @@ TransactionSchema.pre('remove', function (next) {
     .then(account => {
       if (transaction.grouping.type === 'expense')
         return next();
-      return account.mainBalance();
+      return account.currentBalance();
     })
     .then(main => {
       if (main - transaction.amount < 0)

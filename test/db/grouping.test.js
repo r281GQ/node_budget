@@ -165,9 +165,9 @@ describe("Grouping", () => {
         return Promise.all([Account.find({}), Transaction.find({})]);
       })
       .then(values => {
-        return values[0][0].mainBalance();
+        return values[0][0].currentBalance();
       })
-      
+
       .then(v => {
         expect(v).toBe(100);
         done();

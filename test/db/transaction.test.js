@@ -58,7 +58,7 @@ describe('Transaction', () => {
             .then(() => {
                 return Account.findOne({ name: 'main' });
             }).then(accountUpdated => {
-                return accountUpdated.mainBalance();
+                return accountUpdated.currentBalance();
             })
             .then(mainBalance => {
                 expect(mainBalance).toBe(15);
@@ -95,7 +95,23 @@ describe('Transaction', () => {
                 transaction.grouping = grouping;
                 transaction.user = user;
 
-                return Promise.all([account.save(), grouping.save(), transaction.save()])
+                return Promise.all([account.save(), grouping.save(), User.findOne({})])
+            })
+            .then(persistedItems => {
+              let account = persistedItems[0];
+              let grouping = persistedItems[1];
+              let user = persistedItems[2];
+
+              let transaction = new Transaction({
+                  name: 'current rent',
+                  amount: 10,
+                  currency: 'GBP'
+              });
+
+              transaction.account = account;
+              transaction.grouping = grouping;
+              transaction.user = user;
+              return transaction.save();
             })
             .then(() => {
             })

@@ -467,7 +467,7 @@ describe("endpoints", () => {
               .set("Accept", "application/json")
               .expect(200)
               .expect(res => {
-                // console.log(res.body);
+                console.log(res.body);
                 expect(res.body.name).toBe("main");
               })
               .end(done);

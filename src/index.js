@@ -73,16 +73,16 @@ app.post("/api/logIn", (request, response) => {
 
 app.get("/api/account", authMiddleWare, (req, res) => {
   let accountsToSend;
+  console.log('so far');
 
   let { _id } = req.loggedInUser;
-
   Account.find({ user: _id })
     .sort({ name: 1 })
     .then(accounts => {
       accountsToSend = accounts;
       return Promise.all(
         _.map(accounts, account => {
-          return account.mainBalance();
+          return account.currentBalance();
         })
       );
     })
@@ -116,7 +116,7 @@ app.put("/api/account", authMiddleWare, (request, response) => {
     })
     .then(account => {
       accountToBeSent = account;
-      return account.mainBalance();
+      return account.currentBalance();
     })
     .then(mainBalance => {
       response.send(
@@ -152,7 +152,7 @@ app.post("/api/account", authMiddleWare, (request, response) => {
   account
     .save()
     .then(ac => {
-      return ac.mainBalance();
+      return ac.currentBalance();
     })
     .then(main => {
       let r = _.pick(account, ["name", "_id", "balance"]);
@@ -367,7 +367,7 @@ app.get("/api/account/:id", authMiddleWare, (request, response) => {
         return response.sendStatus(403);
 
       ac = account;
-      return account.mainBalance();
+      return account.currentBalance();
     })
     .then(balance => {
       response

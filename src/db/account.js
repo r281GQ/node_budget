@@ -19,7 +19,7 @@ let AccountSchema = new Schema({
   }
 });
 
-AccountSchema.methods.mainBalance = function() {
+AccountSchema.methods.currentBalance = function() {
   let account = this;
   let Transaction = mongoose.model("Transaction");
   let Grouping = mongoose.model("Grouping");
