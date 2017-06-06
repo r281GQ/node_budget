@@ -162,7 +162,48 @@ describe('Budget', () => {
                 transaction3.user = user;
                 transaction3.budget = budget;
 
-                return Promise.all([budget.save(), account.save(), grouping.save(), transaction.save(), transaction2.save(), transaction3.save()])
+                return Promise.all([budget.save(), account.save(), grouping.save(), User.findOne({})])
+            })
+            .then(persistedItems => {
+              let transaction = new Transaction({
+                  name: 'current rent',
+                  amount: 10,
+                  currency: 'GBP'
+              });
+
+              let transaction2 = new Transaction({
+                  name: 'current rent',
+                  amount:15,
+                  currency: 'GBP'
+              });
+
+              let transaction3 = new Transaction({
+                  name: 'current rent',
+                  amount:20,
+                  currency: 'GBP',
+                  date: moment('04-04-2017', 'DD-MM-YYYY')
+              });
+
+              let budget = persistedItems[0];
+              let account = persistedItems[1];
+              let grouping = persistedItems[2];
+              let user = persistedItems[3];
+              transaction.account = account;
+              transaction.grouping = grouping;
+              transaction.user = user;
+              transaction.budget = budget;
+
+              transaction2.account = account;
+              transaction2.grouping = grouping;
+              transaction2.user = user;
+              transaction2.budget = budget;
+
+              transaction3.account = account;
+              transaction3.grouping = grouping;
+              transaction3.user = user;
+              transaction3.budget = budget;
+
+              return Promise.all([transaction.save(), transaction2.save(), transaction3.save()]);
             })
             .then(() => {
                 return Budget.findOne({});

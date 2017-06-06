@@ -40,7 +40,7 @@ app.post("/api/signUp", (request, response) => {
     .then(user => {
       response.status(201).send(_.pick(user, ["_id", "name", "email"]));
     })
-    .catch(error => response.sendStatus(409));
+    .catch(error => response.status(409).send({message: 'Wrong input was provided!'}));
 });
 
 const authMiddleWare = (request, response, next) => {
@@ -69,6 +69,67 @@ app.post("/api/logIn", (request, response) => {
       return response.status(401).send({message: 'Wrong password provided!'});
     })
     .catch(() => response.status(404).send('No such user!'));
+});
+
+app.get("/api/account", authMiddleWare, (req, res) => {
+  let accountsToSend;
+
+  let { _id } = req.loggedInUser;
+
+  Account.find({ user: _id })
+    .sort({ name: 1 })
+    .then(accounts => {
+      accountsToSend = accounts;
+      return Promise.all(
+        _.map(accounts, account => {
+          return account.mainBalance();
+        })
+      );
+    })
+    .then(balances => {
+      let reduced = _.map(accountsToSend, account =>
+        _.pick(account, ["name", "_id", "balance", "user"])
+      );
+      let currentBalances = _.map(balances, balance => {
+        return { currentBalance: balance };
+      });
+      res.send(_.merge(reduced, currentBalances));
+    })
+    .catch(error => console.log(error));
+});
+
+app.put("/api/account", authMiddleWare, (request, response) => {
+  let { _id, name } = request.body;
+
+  let accountToBeSent;
+
+  Account.findOne({ _id })
+    .then(account => {
+      if (!account.user.equals(request.loggedInUser._id))
+        return response.sendStatus(403);
+
+      return Account.findOneAndUpdate(
+        { _id },
+        { $set: { name } },
+        { new: true }
+      );
+    })
+    .then(account => {
+      accountToBeSent = account;
+      return account.mainBalance();
+    })
+    .then(mainBalance => {
+      response.send(
+        _.extend(_.pick(accountToBeSent, ["name", "_id", 'user', 'balance']), {
+          currentBalance: mainBalance
+        })
+      );
+    })
+    .catch(error => {
+      console.log(error);
+      response.sendStatus(500);
+    });
+
 });
 
 app.post("/api/account", authMiddleWare, (request, response) => {
@@ -102,14 +163,6 @@ app.post("/api/account", authMiddleWare, (request, response) => {
 });
 
 app.post("/api/grouping", authMiddleWare, (request, response) => {
-  // let rawGrouping = {
-  //   name: request.body.name,
-  //   type: request.body.type
-  // };
-
-  // let dependencies = {
-  //   user: request.user
-  // };
 
   let grouping = new Grouping({
     name: request.body.name,
@@ -203,37 +256,6 @@ app.get("/api/grouping/:id", authMiddleWare, (req, res) => {
     })
     .catch(error => res.sendStatus(500));
 
-  // if (req.query.listTransactions && req.query.listTransactions === "true") {
-  //   Promise.all([
-  //     Grouping.find({}).sort({ name: 1 }),
-  //     Transaction.find({}).populate("grouping")
-  //   ])
-  //     .then(datas => {
-  //       let groupings = datas[0];
-  //       let transactions = datas[1];
-  //       res.send(
-  //         _.map(groupings, grouping => {
-  //           return _.extend({}, _.pick(grouping, ["name", "type", "_id"]), {
-  //             transatcion: _.filter(transactions, tx =>
-  //               tx.grouping._id.equals(grouping._id)
-  //             )
-  //           });
-  //         })
-  //       );
-  //     })
-  //     .catch(error => console.log(error));
-  // } else {
-  //   Grouping.find({})
-  //     .sort({ name: 1 })
-  //     .then(groupings =>
-  //       res.send(
-  //         _.map(groupings, grouping =>
-  //           _.pick(grouping, ["name", "type", "_id"])
-  //         )
-  //       )
-  //     )
-  //     .catch(error => console.log(error));
-  // }
 });
 
 app.get("/api/transaction", authMiddleWare, (request, response) => {
@@ -284,79 +306,7 @@ app.put("/api/transaction", authMiddleWare, (request, response) => {
     .catch(error => console.log(error));
 });
 
-app.get("/api/account", authMiddleWare, (req, res) => {
-  let accountsToSend;
 
-  let user = req.loggedInUser._id;
-
-  console.log(user);
-
-  Account.find({ user })
-    .sort({ name: 1 })
-    .then(accounts => {
-      accountsToSend = accounts;
-      return Promise.all(
-        _.map(accounts, account => {
-          return account.mainBalance();
-        })
-      );
-    })
-    .then(balances => {
-      let reduced = _.map(accountsToSend, account =>
-        _.pick(account, ["name", "_id"])
-      );
-      let newStuff = _.map(balances, b => {
-        return { balance: b };
-      });
-      console.log(_.merge(reduced, newStuff));
-      res.send(_.merge(reduced, newStuff));
-    })
-    .catch(error => console.log(error));
-});
-
-app.put("/api/account", authMiddleWare, (request, response) => {
-  // let _id = request.body.id;
-  //
-  // let name = request.body.name;
-
-  let accountToBeSent;
-
-  Account.findOne({ _id: request.body._id })
-    .then(account => {
-      if (account.user.toString() !== request.loggedInUser._id)
-        return response.sendStatus(403);
-
-      return Account.findOneAndUpdate(
-        { _id: account._id },
-        { $set: { name: request.body.name } },
-        { new: true }
-      );
-    })
-    .then(account => {
-      accountToBeSent = account;
-      return account.mainBalance();
-    })
-    .then(mainBalance => {
-      response.send(
-        _.extend(_.pick(accountToBeSent, ["name", "_id"]), {
-          balance: mainBalance
-        })
-      );
-    })
-    .catch(error => console.log(error));
-
-  // Account.findOneAndUpdate({ _id }, { $set: { name } }, { new: true })
-  //   .then(account => {
-  //     accountToBeSent = account;
-  //     return account.mainBalance();
-  //   })
-  //   .then(mainBalance => {
-  //     response.send(
-  //       _.extend(_.pick(accountToBeSent, ["name"], { balance: mainBalance }))
-  //     );
-  //   })
-  //   .catch(error => console.log(error));
-});
 
 app.post("/api/transaction", authMiddleWare, (request, response) => {
   let tx = new Transaction({

@@ -128,6 +128,8 @@ describe("equity", () => {
           currency: "GBP"
         });
 
+
+
         equity.user = user;
 
         let tx = new Transaction({
