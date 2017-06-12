@@ -51,7 +51,7 @@ describe("equity", () => {
       .then(user => {
         let account = new Account({
           name: "main",
-          balance: 100,
+          initialBalance: 100,
           currency: "GBP"
         });
         account.user = user;
@@ -95,7 +95,7 @@ describe("equity", () => {
         return Equity.findOne({ name: "betting" });
       })
       .then(equity => {
-        return equity.bal();
+        return equity.currentBalance();
       })
       .then(balance => {
         expect(balance).toBe(1050);
@@ -109,7 +109,7 @@ describe("equity", () => {
       .then(user => {
         let account = new Account({
           name: "main",
-          balance: 100,
+          initialBalance: 100,
           currency: "GBP"
         });
         account.user = user;
@@ -155,7 +155,7 @@ describe("equity", () => {
         return Equity.findOne({ name: "debt" });
       })
       .then(equity => {
-        return equity.bal();
+        return equity.currentBalance();
       })
       .then(balance => {
         expect(balance).toBe(950);

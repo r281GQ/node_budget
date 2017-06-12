@@ -1,6 +1,6 @@
-const { mongoose } = require("./mongooseConfig");
 const _ = require("lodash");
 
+const { mongoose } = require("./mongooseConfig");
 const { currencyValidator } = require("./validators");
 
 const Schema = mongoose.Schema;
@@ -14,29 +14,30 @@ let EquitySchema = new Schema({
     type: String,
     validate: {
       validator: type => type === "asset" || type === "liability"
-    }
+    },
+    required: true
   },
   initialBalance: {
-    default: 0,
-    
+    required: true,
     type: Number
   },
   currency: {
+    required: true,
     type: String,
-    default: 'GBP',
+    default: "GBP",
     validate: {
       validator: currencyValidator
     }
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: "User",
+    required: true
   }
 });
 
-EquitySchema.methods.bal = function() {
+EquitySchema.methods.currentBalance = function() {
   var equity = this;
-  // assume this.type = asset
 
   let Transaction = mongoose.model("Transaction");
   return new Promise((resolve, reject) => {
@@ -68,5 +69,7 @@ EquitySchema.methods.bal = function() {
       .catch(error => console.log(error));
   });
 };
+
 const Equity = mongoose.model("Equity", EquitySchema);
+
 module.exports = { Equity };

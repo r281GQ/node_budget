@@ -50,7 +50,7 @@ describe("Grouping", () => {
 
         let account = new Account({
           name: "main",
-          balance: 100
+          initialBalance: 100
         });
 
         grouping.user = user;
@@ -90,7 +90,7 @@ describe("Grouping", () => {
       .then(user => {
         let sampleAccount = new Account({
           name: "main",
-          balance: 100,
+          initialBalance: 100,
           currency: "GBP"
         });
         sampleAccount.user = user;

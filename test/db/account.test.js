@@ -45,7 +45,7 @@ describe('Account', () => {
             .then(user => {
                 let account = new Account({
                     name: 'main',
-                    balance: 100,
+                    initialBalance: 100,
                     currency: 'GBP'
                 });
 
@@ -89,7 +89,7 @@ describe('Account', () => {
             .then(user => {
                 let sampleAccount = new Account({
                     name: 'main',
-                    balance: 100,
+                    initialBalance: 100,
                     currency: 'GBP'
                 });
 

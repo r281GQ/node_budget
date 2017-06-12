@@ -1,24 +1,43 @@
-const { mongoose } = require("./../../src/db/mongooseConfig");
-
 const moment = require("moment");
-
 const _ = require("lodash");
+
+const { mongoose } = require("./../../src/db/mongooseConfig");
+const { currencyValidator } = require("./../../src/db/validators");
 
 const Schema = mongoose.Schema;
 
 let BudgetPeriodSchema = new Schema({
   month: {
-    type: Date
+    type: Date,
+    required: true
   },
-  allowance: Number
+  allowance: {
+    type: Number,
+    required: true
+  }
 });
 
 let BudgetSchema = new Schema({
-  name: String,
-  currency: String,
+  defaultAllowance:{
+    type: Number,
+    required: true
+  },
+  name: {
+    required: true,
+    type: String
+  },
+  currency: {
+    type: String,
+    required: true,
+    default: "GBP",
+    validate: {
+      validator: currencyValidator
+    }
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
+    ref: "User",
+    required: true
   },
   budgetPeriods: [BudgetPeriodSchema]
 });
@@ -47,29 +66,30 @@ BudgetSchema.methods.balances = function() {
     Transaction.find({ budget: budget }).then(transactions => {
       let array = _.map(bps, bp =>
         _.extend({}, _.pick(bp, ["allowance", "month"]), {
-          monthlyBalance: _.reduce(
-            _.map(
-              _.filter(budget.budgetPeriods, bpToFilter =>
-                moment(bpToFilter.month).isSame(
-                  moment(bp.month, "DD-MM-YYYY"),
-                  "month"
-                )
-              ),
-              bpToMap => bpToMap.allowance
-            ),
-            (sum, allowance) => sum + allowance,
-            0
-          ) -
+          monthlyBalance:
             _.reduce(
-              _.filter(transactions, transaction =>
-                moment(transaction.date).isSame(
-                  moment(bp.month, "DD-MM-YYYY"),
-                  "month"
-                )
+              _.map(
+                _.filter(budget.budgetPeriods, bpToFilter =>
+                  moment(bpToFilter.month).isSame(
+                    moment(bp.month, "DD-MM-YYYY"),
+                    "month"
+                  )
+                ),
+                bpToMap => bpToMap.allowance
               ),
-              (sum, transaction) => sum + transaction.amount,
+              (sum, allowance) => sum + allowance,
               0
-            )
+            ) -
+              _.reduce(
+                _.filter(transactions, transaction =>
+                  moment(transaction.date).isSame(
+                    moment(bp.month, "DD-MM-YYYY"),
+                    "month"
+                  )
+                ),
+                (sum, transaction) => sum + transaction.amount,
+                0
+              )
         })
       );
 
@@ -78,9 +98,32 @@ BudgetSchema.methods.balances = function() {
   });
 };
 
+BudgetSchema.pre('save', function(next){
+  let budget = this;
+  let currentDate = moment();
+  let monthsNumbers = [1,2,3,4,5,6,7,8,9,10,11,12];
+  let arrayOfDate = _.reduce(monthsNumbers, (sum, monthnumber) => {
+    let last=_.last(sum);
+    if(!last){
+      let init = moment();
+      sum.push({month: init, allowance: this.defaultAllowance});
+    }else{
+      cloend = _.cloneDeep(last.month);
+      let g = moment(cloend).add(1, 'M');
+      sum.push({month: g, allowance: this.defaultAllowance});
+
+    }
+
+    return sum;
+  }, [] );
+// console.log('done');
+  this.budgetPeriods = arrayOfDate;
+  next();
+});
+
 BudgetSchema.pre("remove", function(next) {
   let Transaction = mongoose.model("Transaction");
-  Transaction.findAndUpdate({ budget: this }, { $unset: { budget: 1 } })
+  Transaction.update({ budget: this }, { $unset: { budget: 1 } })
     .then(() => next())
     .catch(error => next(error));
 });

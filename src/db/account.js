@@ -1,21 +1,31 @@
+  const _ = require("lodash");
+
 const { mongoose } = require("./mongooseConfig");
-const _ = require("lodash");
+const { currencyValidator } = require("./validators");
 
 const Schema = mongoose.Schema;
 
 let AccountSchema = new Schema({
   name: {
-    type: String
+    type: String,
+    required: true
   },
-  balance: {
-    type: Number
+  initialBalance: {
+    type: Number,
+    required: true
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
+    ref: "User",
+    required: true
   },
   currency: {
-    type: String
+    type: String,
+    validate: {
+      validator: currencyValidator
+    },
+    required: true,
+    default: "GBP"
   }
 });
 
@@ -23,32 +33,6 @@ AccountSchema.methods.currentBalance = function() {
   let account = this;
   let Transaction = mongoose.model("Transaction");
   let Grouping = mongoose.model("Grouping");
-
-  // console.log('IIIIDDD',account._id, account.balance);
-
-  // return new Promise((resolve, reject) => {
-  //   Transaction.find({ account: account })
-  //     .populate("grouping")
-  //     .then(transactions => {
-  //       // if(transactions.length === 0)
-  //       // return resolve(account.balance);
-  //       console.log('inside mainbalance: ',transactions);
-  //       let total = _.reduce(
-  //         transactions,
-  //         (sum, transaction) => {
-  //           // console.log(sum, transaction);
-  //           return transaction.grouping.type === "income"
-  //             ? sum + transaction.amount
-  //             : sum - transaction.amount;
-  //         }
-  //           ,
-  //         account.balance
-  //       );
-  //       // console.log(total);
-  //       resolve(total);
-  //     })
-  //     .catch(error => {console.log(error);reject(error);} );
-  // });
 
   return new Promise((resolve, reject) => {
     Transaction.find({ account: account._id })
@@ -60,7 +44,7 @@ AccountSchema.methods.currentBalance = function() {
             transaction.grouping.type === "income"
               ? sum + transaction.amount
               : sum - transaction.amount,
-          account.balance
+          account.initialBalance
         );
         // console.log(total);
         resolve(total);
@@ -71,7 +55,15 @@ AccountSchema.methods.currentBalance = function() {
 
 AccountSchema.pre("remove", function(next) {
   let Transaction = mongoose.model("Transaction");
-  Transaction.remove({ account: this._id }).then(() => next());
+  Transaction.remove({ account: this._id })
+  .then(() => {
+    console.log('HERE');
+      next();
+  })
+  .catch(error => {
+    console.log(error);
+    next(error);
+  });
 });
 
 let Account = mongoose.model("Account", AccountSchema);

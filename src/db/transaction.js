@@ -1,28 +1,30 @@
+const moment = require('moment');
+
 const { mongoose } = require('./mongooseConfig');
 const { currencyValidator } = require('./validators');
-
-const moment = require('moment');
 
 const Schema = mongoose.Schema;
 
 let TransactionSchema = new Schema({
   name: {
     type: String,
-
+    required: true,
     trim: true
   },
   amount: {
     type: Number,
-
+    required: true
   },
   currency: {
     type: String,
     validate: {
       validator: currencyValidator
     },
+    required: true,
     default: 'GBP'
   },
   date: {
+    required: true,
     type: Date,
     default: moment
   },
@@ -33,12 +35,12 @@ let TransactionSchema = new Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-
+    required: true
   },
   account: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Account',
-
+    required: true,
   },
   budget: {
     type: mongoose.Schema.Types.ObjectId,
@@ -47,7 +49,7 @@ let TransactionSchema = new Schema({
   grouping: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Grouping',
-
+    required: true
   },
   equity: {
     type: mongoose.Schema.Types.ObjectId,
@@ -61,14 +63,12 @@ TransactionSchema.pre('save', function (next) {
 
   Account.findOne({ _id: transaction.account })
     .then(account => {
-      // console.log(account);
       if (transaction.grouping.type === 'income')
         return next();
       return account.currentBalance();
     })
-    .then(main => {
-      // console.log(main, transaction.amount);
-      if (main - transaction.amount < 0)
+    .then(currentBalance => {
+      if (currentBalance - transaction.amount < 0)
         return next(new Error('Account balance is too low!'));
       next();
     });
@@ -84,10 +84,14 @@ TransactionSchema.pre('remove', function (next) {
         return next();
       return account.currentBalance();
     })
-    .then(main => {
-      if (main - transaction.amount < 0)
+    .then(currentBalance => {
+      if (currentBalance - transaction.amount < 0)
         return next(new Error('Account balance is too low!'));
       next();
+    })
+    .catch(error => {
+      console.log('AINT IN HERE');
+      next(error);
     });
 });
 

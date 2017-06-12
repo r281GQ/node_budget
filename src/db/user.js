@@ -18,9 +18,41 @@ let UserSchema = new Schema({
     }
 });
 
-// UserSchema.statics.findById = function (_id) {
-//     return this.find({ _id: _id });
-// };
+UserSchema.pre('remove', function(next){
+  let Transaction = mongoose.model('Transaction');
+  Transaction.remove({user: {$in: this}})
+    .then(() => next())
+    .catch((err) => {next(err);});
+});
+
+UserSchema.pre('remove', function(next){
+  let Budget = mongoose.model('Budget');
+  Budget.remove({user: {$in: this}})
+    .then(() => next())
+    .catch((err) => {next(err);});
+});
+
+UserSchema.pre('remove', function(next){
+  let Account = mongoose.model('Account');
+  Account.remove({user: {$in: this}})
+    .then(() => next())
+    .catch((err) => {next(err);});
+});
+
+
+UserSchema.pre('remove', function(next){
+  let Grouping = mongoose.model('Grouping');
+  Grouping.remove({user: {$in: this}})
+    .then(() => next())
+    .catch((err) => {next(err);});
+});
+
+UserSchema.pre('remove', function(next){
+  let Equity = mongoose.model('Equity');
+  Equity.remove({user: {$in: this}})
+    .then(() => next())
+    .catch((err) => {next(err);});
+});
 
 let User = mongoose.model('User', UserSchema);
 

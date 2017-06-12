@@ -31,7 +31,7 @@ describe('Transaction', () => {
 
                 let account = new Account({
                     name: 'main',
-                    balance: 5
+                    initialBalance: 5
                 });
 
                 account.user = user;
@@ -73,7 +73,7 @@ describe('Transaction', () => {
 
                 let account = new Account({
                     name: 'main',
-                    balance: 5
+                    initialBalance: 5
                 });
 
                 account.user = user;
@@ -129,7 +129,7 @@ describe('Transaction', () => {
 
                 let account = new Account({
                     name: 'main',
-                    balance: 15
+                    initialBalance: 15
                 });
 
                 account.user = user;
