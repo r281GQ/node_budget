@@ -108,7 +108,6 @@ describe("endpoints", () => {
           currency: "GBP",
           memo: "test transaction"
         });
-        console.log('BEFORE', userG);
         transactions.user = userG;
 
         transactions.account = dependencies[1];
@@ -138,10 +137,8 @@ describe("endpoints", () => {
             password: "123456"
           })
           .end((err, response) => {
-            console.log('RESPONSE FORM SUFF', response);
             let token = response.headers["x-auth"];
             // console.log(response);
-            console.log(token);
             request(app)
               .delete(`/api/account/${account._id}`)
               .set("x-auth", token)
@@ -150,7 +147,6 @@ describe("endpoints", () => {
               .end((err, res) => {
                 Account.find({}).then(account => {
                   expect(account.length).toBe(0);
-                  console.log(account);
                   done();
                 });
               });
@@ -180,7 +176,6 @@ describe("endpoints", () => {
               .set("Accept", "application/json")
               .expect(200)
               .expect(res => {
-                console.log(res.body);
                 expect(res.body.name).toBe("main");
               })
               .end(done);
@@ -214,7 +209,6 @@ describe("endpoints", () => {
               })
               .expect(200)
               .expect(res => {
-                console.log(res.body);
                 expect(res.body.name).toBe("side");
               })
               .end(done);
@@ -246,7 +240,6 @@ describe("endpoints", () => {
           })
           .expect(201)
           .expect(res => {
-            console.log(res.body);
             expect(res.body.name).toBe("new Account");
           })
           .end(done);

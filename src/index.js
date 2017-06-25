@@ -6,8 +6,6 @@ const cors = require('cors');
 
 const { mongoose } = require("./db/mongooseConfig");
 
-const { updateTransction } = require("./db/queries/transaction-update");
-
 const { modelRoutes } = require("./../src/routes/routes");
 
 const {
@@ -85,7 +83,6 @@ app.post("/api/logIn", (request, response) => {
         let userToSend = _.pick(user, ["_id", "name", "email"]);
         let token = jwt.sign(userToSend, secret);
         return response.set("x-auth", token).status(200).send(userToSend);
-        // return response.set("Access-Control-Expose-Headers").set("x-auth", token).status(200).send(userToSend);
       }
 
       return response.status(401).send({ message: "Wrong password provided!" });
@@ -165,48 +162,7 @@ app.listen(2000, () => {
 // });
 //
 //
-//
-// app.put(`/api/budget`, authMiddleWare, (request, response) => {
-//   if (request.loggedInUser._id !== budget.user.toString())
-//     return response.sendStatus(403);
-//
-//   // Budget.findOneAndUpdate({_id: request.body._id}, {$set: {name: request.body.name }  }, {new: true})
-//   //   .then()
-// });
-//
-// app.put(`/api/budgetPeriod`, authMiddleWare, (request, response) => {
-//   if (request.loggedInUser._id !== budget.user.toString())
-//     return response.sendStatus(403);
-//
-//   // Budget.findOneAndUpdate({_id: request.body._id, budgetPeriods._id: request.body.budgetPeriod._id}, {$set: {name: request.body.name } }, {new: true})
-//   //   .then()
-// });
-//
-//
-//
-//
-//
-//
-// app.delete('/api/budget/:id', authMiddleWare, (request, response)=>{
-//
-//   let _id = request.params['id'];
-//   let loggedInUser = request.loggedInUser;
-//
-//   Budget.findOne({ _id })
-//     .then(budget => {
-//         if(!budget.user.equals(loggedInUser._id))
-//           response.status(403).send();
-//         return budget.remove();
-//     })
-//     .then(() => {
-//       response.status(200).send();
-//     })
-//     .catch(error => {
-//
-//     });
-// });
-//
-//
+
 //
 // app.put('/api/user', authMiddleWare, (request, response)=>{
 //
@@ -248,39 +204,6 @@ app.listen(2000, () => {
 //       console.log(error);
 //       response.status(500).send({error});
 //     });
-//
-//
-// });
-//
-// app.put('/api/grouping', authMiddleWare, (request, response)=>{
-//   let { _id, name } = request.body;
-//   let { loggedInUser } = request;
-//
-//   Grouping.findOne({ _id })
-//     .then( grouping => {
-//
-//       if(!grouping.user.equals(loggedInUser._id))
-//         response.status(403).send({error: 'auth'});
-//
-//       return Grouping.findOneAndUpdate(
-//         { _id },
-//         { $set: { name } },
-//         { new: true }
-//       );
-//     })
-//     .then(gr=> response.status(200).send(gr))
-//     .catch(error => {});
-// });
-//
-// app.get('/api/grouping', authMiddleWare, (request, response)=>{
-//
-//   let { loggedInUser } = request;
-//
-//   Grouping.find({user: loggedInUser._id})
-//     .then(groupings =>{
-//       response.status(200).send(groupings);
-//     })
-//     .catch(error => console.log(error));
 //
 //
 // });

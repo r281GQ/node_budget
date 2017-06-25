@@ -159,33 +159,41 @@ describe('Transaction', () => {
                     initialBalance: 15
                 });
 
-                account.user = user;
+                account.user = __user;
 
                 let rent = new Grouping({
                     name: 'rent',
                     type: 'expense'
                 });
 
-                rent.user = user;
+                rent.user = __user;
 
                 let salary = new Grouping({
                     name: 'salary',
                     type: 'income'
                 });
 
-                salary.user = user;
+                salary.user = __user;
 
-                let transaction2 = new Transaction({
-                    name: 'weekly salary',
-                    amount: 20,
-                    currency: 'GBP'
-                });
-                transaction2.account = account;
-                transaction2.grouping = salary;
-                transaction2.user = user;
-                return Promise.all([account.save(), rent.save(), salary.save(), transaction2.save()])
+
+                return Promise.all([account.save(), rent.save(), salary.save()])
             })
-            .then(() => {
+            .then(dep => {
+              let transaction2 = new Transaction({
+                  name: 'weekly salary',
+                  amount: 20,
+                  currency: 'GBP'
+              });
+              transaction2.account = dep[0];
+              transaction2.grouping = dep[2];
+              transaction2.user = __user;
+              return transaction2.save();
+            })
+            .then((dep) => {
+
+
+
+
                 return Promise.all([Account.findOne({ name: 'main' }), Grouping.findOne({ name: 'rent' }),
                 User.findOne({})]);
             })
@@ -197,7 +205,7 @@ describe('Transaction', () => {
                 });
                 transaction.account = values[0];
                 transaction.grouping = values[1];
-                transaction.user = values[2];
+                transaction.user = __user;
 
                 return transaction.save();
             })

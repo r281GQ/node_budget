@@ -100,6 +100,45 @@ const handleGetBudget = (request, response)=>{
 };
 
 
+//
+// app.put(`/api/budget`, authMiddleWare, (request, response) => {
+//   if (request.loggedInUser._id !== budget.user.toString())
+//     return response.sendStatus(403);
+//
+//   // Budget.findOneAndUpdate({_id: request.body._id}, {$set: {name: request.body.name }  }, {new: true})
+//   //   .then()
+// });
+//
+//
+// app.put(`/api/budgetPeriod`, authMiddleWare, (request, response) => {
+//   if (request.loggedInUser._id !== budget.user.toString())
+//     return response.sendStatus(403);
+//
+//   // Budget.findOneAndUpdate({_id: request.body._id, budgetPeriods._id: request.body.budgetPeriod._id}, {$set: {name: request.body.name } }, {new: true})
+//   //   .then()
+// });
+//
+
+// app.delete('/api/budget/:id', authMiddleWare, (request, response)=>{
+//
+//   let _id = request.params['id'];
+//   let loggedInUser = request.loggedInUser;
+//
+//   Budget.findOne({ _id })
+//     .then(budget => {
+//         if(!budget.user.equals(loggedInUser._id))
+//           response.status(403).send();
+//         return budget.remove();
+//     })
+//     .then(() => {
+//       response.status(200).send();
+//     })
+//     .catch(error => {
+//
+//     });
+// });
+
+
 module.exports = {
   handlePostBudget,
   handleGetAllBudgets,

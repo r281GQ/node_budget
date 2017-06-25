@@ -226,7 +226,6 @@ describe("Budget", () => {
         return budget.balances();
       })
       .then(stuff => {
-        console.log('BALANCES: ', stuff);
         done();
       })
       .catch(error => done(error));

@@ -139,7 +139,6 @@ describe("endpoints", () => {
           .set("x-auth", token)
           .set("Accept", "application/json")
           .expect(res => {
-            console.log(res.body);
             expect(res.body.name).toBe("rent");
           })
           .end(done);
@@ -167,7 +166,6 @@ describe("endpoints", () => {
           .expect(201)
           .expect(res => {
             // console.log(res);
-            console.log(res.body);
             // expect(res.body._id).toBe(transaction._id.toString());
             // expect(res.body.user).toBe(transaction.user.toString());
           })
@@ -189,7 +187,6 @@ describe("endpoints", () => {
             })
             .expect(200)
             .expect(res => {
-              console.log(res.body);
             })
             .end(done);
         });
@@ -215,7 +212,6 @@ describe("endpoints", () => {
                 .get('/api/grouping')
                 .set('x-auth', token)
                 .expect(res =>{
-                  console.log(res.body);
                 })
                 .end(done);
             });

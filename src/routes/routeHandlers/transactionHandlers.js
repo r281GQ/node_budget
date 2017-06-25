@@ -52,135 +52,94 @@ const handlePutTransaction = (request, response) => {
     currency
   };
 
-  let transaction, new_account, newGrouping;
+  let transaction, new_account, newGrouping, date;
 
-  let tobesentback;
 
   Promise.all([
     Transaction.findOne({ _id, user }).populate("account grouping"),
-    Account.findOne({ _id: account }),
-    Grouping.findOne({ _id: grouping })
+    Account.findOne({ _id: account, user }),
+    Grouping.findOne({ _id: grouping, user })
   ])
     .then(queries => {
 
       transaction = queries[0];
-      if(!transaction)
-        return Promise.reject({message: RESOURCE_NOT_FOUND})
       new_account = queries[1];
       newGrouping = queries[2];
-      tobesentback = _.pick(_.cloneDeep(transaction), ["date", "_id", "user"]);
+      grouping = queries[2];
+      if(!transaction || !new_account || !newGrouping)
+        return Promise.reject({message: RESOURCE_NOT_FOUND})
+      date = transaction.date;
       return Promise.all([
         new_account.currentBalance(),
         transaction.account.currentBalance()
       ]);
     })
-    // Transaction.findOne({ _id }).populate('account grouping')
     .then(stuff => {
-      // let transaction = stuff [0];
-      // let newAccount = stuff[1];
-      // let newGrouping = stuff[2];
-      // tobesentback = _.pick(_.cloneDeep(transaction), ["date", "_id", "user"]);
       let oldbal = stuff[1];
       let newbal = stuff[0];
 
-      console.log("balance:", oldbal, newbal);
 
       let oldAccountId = transaction.account._id;
       let oldGrouping = transaction.grouping;
 
-      let areAccountstheSame = oldAccountId.equals(new_account._id);
+      const areAccountstheSame = oldAccountId.equals(new_account._id);
 
       //TODO: actually only ttpyes need to be the same
       // let areGroupingsstheSame = oldGrouping._id.equals(newGrouping._id);
-      let areGroupingsstheSame = oldGrouping.type === newGrouping.type;
-      console.log("PRE:", oldGrouping, newGrouping);
+      const areGroupingsstheSame = oldGrouping.type === newGrouping.type;
+
+      const isOldGroupingIncome = oldGrouping.type === 'income';
+
+      const isNewGroupingIncome = newGrouping.type === 'income';
 
       let newAmount = amount;
       let oldAmount = transaction.amount;
 
+
+
+      // switch(areAccountstheSame, areGroupingsstheSame, isNewGroupingIncome, isOldGroupingIncome){
+      //   case areAccountstheSame && areGroupingsstheSame && isNewGroupingIncome:
+      //     break console.log('innit');
+      //     case areAccountstheSame && areGroupingsstheSame && !isNewGroupingIncome:
+      //       break console.log('dfsd');
+      // }
+
       if (
         areAccountstheSame &&
         areGroupingsstheSame &&
-        newGrouping.type === "income"
-      ) {
-        let diff = oldAmount - newAmount;
-        if (oldbal - diff > 0) {
-          tobesentback.account = account;
-          tobesentback.grouping = newGrouping;
-          tobesentback.amount = amount;
-          tobesentback.name = name;
+        isNewGroupingIncome
+      )
+      return oldbal - (oldAmount - newAmount) > 0 ? Transaction.remove({ _id }) :  Promise.reject(ACCOUNT_BALANCE);
+        // let diff = oldAmount - newAmount;
+        // if (oldbal - (oldAmount - newAmount) > 0) {
+        //   return Transaction.remove({ _id });
+        // } else {
+        //   return Promise.reject(ACCOUNT_BALANCE);
+        // }
 
-          if (equity) tobesentback.equity = equity;
 
-          if (budget) tobesentback.budget = budget;
-          return Transaction.remove({ _id });
-        } else {
-          return Promise.reject(ACCOUNT_BALANCE);
-        }
-      }
 
       if (
         areAccountstheSame &&
         areGroupingsstheSame &&
         newGrouping.type === "expense"
-      ) {
-        let diff = newAmount - oldAmount;
-        console.log("diff:", diff);
-        console.log(oldbal - diff);
-        let g = oldbal - diff >= 0;
-        console.log("ggg", g);
-        if (g) {
-          tobesentback.account = account;
-          tobesentback.grouping = newGrouping;
-          tobesentback.amount = amount;
-          tobesentback.name = name;
+      )
+        return  oldbal - (newAmount - oldAmount) >= 0 ?  Transaction.remove({ _id }) :  Promise.reject(ACCOUNT_BALANCE);
 
-          if (equity) tobesentback.equity = equity;
-
-          if (budget) tobesentback.budget = budget;
-          return Transaction.remove({ _id });
-        } else {
-          return Promise.reject(ACCOUNT_BALANCE);
-        }
-      }
-
-      //
-      // account same old income new expense
-      // old value 100 new 200 diff 300
-      // currentBalance - dif > 0
       if (
         areAccountstheSame &&
         !areGroupingsstheSame &&
         oldGrouping.type === "income" &&
         newGrouping.type === "expense"
       ) {
-        console.log("accountsame, groupings not, old income, new expense");
         let diff = newAmount + oldAmount;
-        console.log("diff:", diff);
-        console.log(oldbal - diff);
         let g = oldbal - diff > 0;
-        console.log("ggg", g);
         if (g) {
-          tobesentback.account = account;
-          tobesentback.grouping = newGrouping;
-          tobesentback.amount = amount;
-          tobesentback.name = name;
-
-          if (equity) tobesentback.equity = equity;
-
-          if (budget) tobesentback.budget = budget;
           return Transaction.remove({ _id });
         } else {
-          console.log("error");
-          // return response.status(302).send({r: 'dfgdf'});
-          // return new Error('wont be enough stex');
           return Promise.reject(ACCOUNT_BALANCE);
         }
       }
-
-      //
-      // account same old expense new income
-      // done
 
       if (
         areAccountstheSame &&
@@ -188,131 +147,46 @@ const handlePutTransaction = (request, response) => {
         oldGrouping.type === "expense" &&
         newGrouping.type === "income"
       ) {
-        console.log("accountsame, groupings not, old expense, new income");
-        // let diff=newAmount+oldAmount;
-        // console.log('diff:',diff);
-        // console.log(oldbal - diff);
-        // let g = oldbal - diff > 0;
-        // console.log('ggg', g);
-        // if(g){
-        tobesentback.account = account;
-        tobesentback.grouping = newGrouping;
-        tobesentback.amount = amount;
-        tobesentback.name = name;
-
-        if (equity) tobesentback.equity = equity;
-
-        if (budget) tobesentback.budget = budget;
         return Transaction.remove({ _id });
-        // }else {
-        //   console.log('error');
-        //   // return response.status(302).send({r: 'dfgdf'});
-        //   // return new Error('wont be enough stex');
-        //   return Promise.reject('balance');
-        // }
       }
-
-      //
-      // account diff both are income
-      // oldaccountcurrentBlanace - oldavelue > 0
-      //
 
       if (
         !areAccountstheSame &&
         areGroupingsstheSame &&
         oldGrouping.type === "income"
       ) {
-        console.log("DIFFERENT ACCOUNT SAME TYPE OF GR, INCOME");
         let diff = newAmount + oldAmount;
-        console.log("diff:", diff);
-        console.log(oldbal - diff);
         let g = oldbal - oldAmount > 0;
-        console.log("ggg", g);
         if (g) {
-          tobesentback.account = account;
-          tobesentback.grouping = newGrouping;
-          tobesentback.amount = amount;
-          tobesentback.name = name;
-
-          if (equity) tobesentback.equity = equity;
-
-          if (budget) tobesentback.budget = budget;
           return Transaction.remove({ _id });
         } else {
-          console.log("error");
-          // return response.status(302).send({r: 'dfgdf'});
-          // return new Error('wont be enough stex');
           return Promise.reject("balance");
         }
       }
-
-      //
-      // account diff both are expenese
-      // newaccountcurrentbalance - newvalie > 0
 
       if (
         !areAccountstheSame &&
         areGroupingsstheSame &&
         oldGrouping.type === "expense"
       ) {
-        console.log("DIFFERENT ACCOUNT SAME TYPE OF GR, EXPENSE");
         let diff = newAmount + oldAmount;
-        console.log("diff:", diff);
-        console.log(oldbal - diff);
         let g = newbal - newAmount >= 0;
-        console.log("ggg", g);
         if (g) {
-          tobesentback.account = account;
-          tobesentback.grouping = newGrouping;
-          tobesentback.amount = amount;
-          tobesentback.name = name;
-
-          if (equity) tobesentback.equity = equity;
-
-          if (budget) tobesentback.budget = budget;
           return Transaction.remove({ _id });
         } else {
-          console.log("error");
-          // return response.status(302).send({r: 'dfgdf'});
-          // return new Error('wont be enough stex');
           return Promise.reject(ACCOUNT_BALANCE);
         }
       }
 
-      // account diff old expense new income
-      // done
-      //TODO: UNIT TEST NEEDED
       if (
         !areAccountstheSame &&
         !areGroupingsstheSame &&
         oldGrouping.type === "expense" &&
         newGrouping.type === "income"
       ) {
-        // let diff=newAmount+oldAmount;
-        // console.log('diff:',diff);
-        // console.log(oldbal - diff);
-        // let g = newbal - newAmount > 0;
-        // console.log('ggg', g);
-        // if(g){
-        tobesentback.account = account;
-        tobesentback.grouping = newGrouping;
-        tobesentback.amount = amount;
-        tobesentback.name = name;
-
-        if (equity) tobesentback.equity = equity;
-
-        if (budget) tobesentback.budget = budget;
         return Transaction.remove({ _id });
-        // }else {
-        //   console.log('error');
-        //   // return response.status(302).send({r: 'dfgdf'});
-        //   // return new Error('wont be enough stex');
-        //   return Promise.reject('balance');
-        // }
       }
 
-      // account diff old income new expense
-      // oldaccountbalance - oldvlaie > o && newbalance - newvale > 0
       //TODO: UNIT TEST NEEDED
       if (
         !areAccountstheSame &&
@@ -320,48 +194,32 @@ const handlePutTransaction = (request, response) => {
         oldGrouping.type === "income" &&
         newGrouping.type === "expense"
       ) {
-        // let diff=newAmount+oldAmount;
-        // console.log('diff:',diff);
-        // console.log(oldbal - diff);
         let g = newbal - newAmount >= 0 && oldbal - oldAmount >= 0;
-        // console.log('ggg', g);
         if (g) {
-          tobesentback.account = account;
-          tobesentback.grouping = newGrouping;
-          tobesentback.amount = amount;
-          tobesentback.name = name;
-
-          if (equity) tobesentback.equity = equity;
-
-          if (budget) tobesentback.budget = budget;
           return Transaction.remove({ _id });
         } else {
-          console.log("error");
-          // return response.status(302).send({r: 'dfgdf'});
-          // return new Error('wont be enough stex');
           return Promise.reject("balance");
         }
       }
 
-      // return Transaction.remove({_id});
     })
     .then(() => {
-      console.log("after removal");
-      let news = new Transaction({
-        _id: tobesentback._id,
-        name: tobesentback.name,
-        date: tobesentback.date,
-        amount: tobesentback.amount
+      let toCreate = new Transaction({
+        _id,
+        name,
+        date,
+        amount
       });
-      news.account = tobesentback.account;
-      news.grouping = tobesentback.grouping;
-      news.user = tobesentback.user;
 
-      if (tobesentback.budget) news.budget = tobesentback.budget;
+      toCreate.account = account;
+      toCreate.grouping = grouping;
+      toCreate.user = user;
 
-      // console.log('NEW GR', news.grouping, grouping);
+      if (budget) toCreate.budget = budget;
+      if (equity) toCreate.equity = equity;
 
-      return news.save();
+
+      return toCreate.save();
     })
     .then(updatedTransaction => {
       let sendabel = _.pick(updatedTransaction, [
@@ -378,7 +236,6 @@ const handlePutTransaction = (request, response) => {
       return response.status(200).send(sendabel);
     })
     .catch(error => {
-      // return response.status(409).send({});
       switch (error) {
         case ACCOUNT_BALANCE:
           return response.status(409).send({ error: "balace" });

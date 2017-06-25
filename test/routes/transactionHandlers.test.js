@@ -93,7 +93,6 @@ describe("Transaction handler", () => {
         done();
       })
       .catch(error => {
-        console.log("ERROR - MAIN BEFORE EACH: ", error);
         done(error);
       });
   });
@@ -156,7 +155,6 @@ describe("Transaction handler", () => {
         })
         .catch(error => {
 
-          console.log(error);
           done(error)
         });
     });
@@ -180,7 +178,6 @@ describe("Transaction handler", () => {
         })
         .catch(error => {
 
-          console.log(error);
           done(error)
         });
     });
@@ -204,7 +201,6 @@ describe("Transaction handler", () => {
         })
         .catch(error => {
 
-          console.log(error);
           done(error)
         });
     });
@@ -229,7 +225,6 @@ describe("Transaction handler", () => {
         })
         .catch(error => {
 
-          console.log(error);
           done(error)
         });
     });
@@ -254,7 +249,6 @@ describe("Transaction handler", () => {
         })
         .catch(error => {
 
-          console.log(error);
           done(error)
         });
     });
@@ -279,7 +273,6 @@ describe("Transaction handler", () => {
         })
         .catch(error => {
 
-          console.log(error);
           done(error)
         });
     });
@@ -304,7 +297,6 @@ describe("Transaction handler", () => {
         })
         .catch(error => {
 
-          console.log(error);
           done(error)
         });
     });
@@ -370,7 +362,6 @@ describe("Transaction handler", () => {
             amount: 1001
           })
           .expect(res => {
-            console.log(res.body);
           })
           .end(done);
         // })
@@ -392,7 +383,6 @@ describe("Transaction handler", () => {
             amount: 1001
           })
           .expect(res => {
-            console.log(res.body);
           })
           .end(done);
       });
@@ -413,7 +403,6 @@ describe("Transaction handler", () => {
             amount: 1001
           })
           .expect(res => {
-            console.log(res.body);
           })
           .end(done);
       });
@@ -434,7 +423,6 @@ describe("Transaction handler", () => {
             amount: 1001
           })
           .expect(res => {
-            console.log(res.body);
           })
           .end(done);
       });
@@ -455,7 +443,6 @@ describe("Transaction handler", () => {
             amount: 500
           })
           .expect(res => {
-            console.log(res.body);
           })
           .end(done);
       });
@@ -473,7 +460,6 @@ describe("Transaction handler", () => {
           done();
         })
         .catch(error => {
-          console.log(error);
           done(error);
         });
     });
@@ -511,7 +497,6 @@ describe("Transaction handler", () => {
           currency: "GBP"
         })
         .then(response => {
-          console.log(response.status);
           return (
             request(app)
               .put(`/api/transaction`)
@@ -548,7 +533,6 @@ describe("Transaction handler", () => {
           currency: "GBP"
         })
         .then(response => {
-          console.log(response.status);
           return (
             request(app)
               .put(`/api/transaction`)
@@ -587,7 +571,6 @@ describe("Transaction handler", () => {
             amount: 1001
           })
           .expect(res => {
-            console.log(res.body);
           })
           .end(done);
       });
@@ -608,7 +591,6 @@ describe("Transaction handler", () => {
             amount: 10
           })
           .expect(res => {
-            console.log(res.body);
             expect(res.body.name).toBe("updated");
           })
           .end(done);
