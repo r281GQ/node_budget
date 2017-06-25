@@ -112,28 +112,7 @@ xdescribe("endpoints", () => {
       });
   });
 
-  it("should get back the grouping that is associated with the id", done => {
-    request(app)
-      .post("/api/logIn")
-      .set("Content-Type", "application/json")
-      .send({
-        email: "endre@mail.com",
-        password: "123456"
-      })
-      .end((err, response) => {
-        let token = response.headers["x-auth"];
 
-        request(app)
-          .get(`/api/grouping/${groupingG._id}`)
-          .set("x-auth", token)
-          .set("Accept", "application/json")
-          .expect(res => {
-            console.log(res.body);
-            expect(res.body.name).toBe("rent");
-          })
-          .end(done);
-      });
-  });
 
   it("should create transaction on post method (account balance is enough)", done => {
     request(app)
@@ -281,34 +260,7 @@ xdescribe("endpoints", () => {
       });
   });
 
-  it("grouping/create", done => {
-    request(app)
-      .post("/api/logIn")
-      .set("Content-Type", "application/json")
-      .send({
-        email: "endre@mail.com",
-        password: "123456"
-      })
-      .end((err, response) => {
-        let token = response.headers["x-auth"];
-        request(app)
-          .post("/api/grouping")
-          .set("x-auth", token)
-          .set("Accept", "application/json")
-          .send({
-            name: "salary",
-            type: "income"
-          })
-          .expect(201)
-          .expect(res => {
-            // console.log(res);
-            console.log(res.body);
-            // expect(res.body._id).toBe(transaction._id.toString());
-            // expect(res.body.user).toBe(transaction.user.toString());
-          })
-          .end(done);
-      });
-  });
+
 
   it("transaction/create", done => {
     Transaction.findOne({})
@@ -459,27 +411,7 @@ xdescribe("endpoints", () => {
     });
   });
 
-it('updateGrouping', done => {
 
-  Grouping.findOne({})
-    .then(grouping => {
-      gettoken(app, token =>{
-        request(app)
-          .put('/api/grouping')
-          .set('x-auth', token)
-          .send({
-            _id: grouping._id,
-            name: 'udapted'
-          })
-          .expect(200)
-          .expect(res => {
-            console.log(res.body);
-          })
-          .end(done);
-      });
-    }).catch(error => console.log(error));
-
-});
 
 it('should delete equity', done => {
   Equity.findOne({})
@@ -508,28 +440,6 @@ it('should delete equity', done => {
 });
 
 
-it('should delete grouping', done =>{
-
-  Grouping.findOne({})
-    .then(grouping => {
-      gettoken(app, token =>{
-        request(app)
-          .delete(`/api/grouping/${grouping._id}`)
-          .set('x-auth', token)
-
-          .expect(200)
-          .end((err, res )=> {
-            request(app)
-              .get('/api/grouping')
-              .set('x-auth', token)
-              .expect(res =>{
-                console.log(res.body);
-              })
-              .end(done);
-          });
-      });
-    }).catch(error => console.log(error));
-});
 
 
 it('should delete user and all items corresponding to it', done=> {

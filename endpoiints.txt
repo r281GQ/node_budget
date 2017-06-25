@@ -1,4 +1,0 @@
-equity:
-  delete
-  get all
-  get by Id

@@ -14,7 +14,7 @@ const {
 
 let userG, accountG, groupingG, equityG;
 
-const getToken = (app, callback) => {
+const getToken = (app, callBack) => {
   return request(app)
     .post("/api/logIn")
     .set("Content-Type", "application/json")
@@ -24,7 +24,7 @@ const getToken = (app, callback) => {
     })
     .end((err, response) => {
       let token = response.headers["x-auth"];
-      callback(token);
+      callBack(token);
     });
 };
 
@@ -108,9 +108,7 @@ describe("endpoints", () => {
           currency: "GBP",
           memo: "test transaction"
         });
-        console.log('BEFORE', userG);
         transactions.user = userG;
-
         transactions.account = dependencies[1];
         transactions.grouping = dependencies[2];
         accountG = dependencies[1];
@@ -125,108 +123,30 @@ describe("endpoints", () => {
         done(error);
       });
   });
-
-  it("account/delete", done => {
-    Account.findOne({})
-      .then(account => {
-        request(app)
-          .post("/api/logIn")
-          .set("Content-Type", "application/json")
-          .expect(200)
-          .send({
-            email: "endre@mail.com",
-            password: "123456"
-          })
-          .end((err, response) => {
-            console.log('RESPONSE FORM SUFF', response);
-            let token = response.headers["x-auth"];
-            // console.log(response);
-            console.log(token);
-            request(app)
-              .delete(`/api/account/${account._id}`)
-              .set("x-auth", token)
-              .set("Accept", "application/json")
-              .expect(200)
-              .end((err, res) => {
-                Account.find({}).then(account => {
-                  expect(account.length).toBe(0);
-                  console.log(account);
-                  done();
-                });
-              });
-          });
+  it("should get back the grouping that is associated with the id", done => {
+    request(app)
+      .post("/api/logIn")
+      .set("Content-Type", "application/json")
+      .send({
+        email: "endre@mail.com",
+        password: "123456"
       })
-      .catch(error => {
-        console.log(error);
-        done(error);
+      .end((err, response) => {
+        let token = response.headers["x-auth"];
+
+        request(app)
+          .get(`/api/grouping/${groupingG._id}`)
+          .set("x-auth", token)
+          .set("Accept", "application/json")
+          .expect(res => {
+            console.log(res.body);
+            expect(res.body.name).toBe("rent");
+          })
+          .end(done);
       });
   });
 
-  it("account/get", done => {
-    Account.findOne({})
-      .then(account => {
-        request(app)
-          .post("/api/logIn")
-          .set("Content-Type", "application/json")
-          .send({
-            email: "endre@mail.com",
-            password: "123456"
-          })
-          .end((err, response) => {
-            let token = response.headers["x-auth"];
-            request(app)
-              .get(`/api/account/${account._id}`)
-              .set("x-auth", token)
-              .set("Accept", "application/json")
-              .expect(200)
-              .expect(res => {
-                console.log(res.body);
-                expect(res.body.name).toBe("main");
-              })
-              .end(done);
-          });
-      })
-      .catch(error => {
-        console.log(error);
-        done(error);
-      });
-  });
-
-  it("account/put", done => {
-    Account.findOne({})
-      .then(account => {
-        request(app)
-          .post("/api/logIn")
-          .set("Content-Type", "application/json")
-          .send({
-            email: "endre@mail.com",
-            password: "123456"
-          })
-          .end((err, response) => {
-            let token = response.headers["x-auth"];
-            request(app)
-              .put(`/api/account`)
-              .set("x-auth", token)
-              .set("Accept", "application/json")
-              .send({
-                _id: account._id,
-                name: "side"
-              })
-              .expect(200)
-              .expect(res => {
-                console.log(res.body);
-                expect(res.body.name).toBe("side");
-              })
-              .end(done);
-          });
-      })
-      .catch(error => {
-        console.log(error);
-        done(error);
-      });
-  });
-
-  it("account/create", done => {
+  it("grouping/create", done => {
     request(app)
       .post("/api/logIn")
       .set("Content-Type", "application/json")
@@ -237,19 +157,70 @@ describe("endpoints", () => {
       .end((err, response) => {
         let token = response.headers["x-auth"];
         request(app)
-          .post(`/api/account`)
+          .post("/api/grouping")
           .set("x-auth", token)
           .set("Accept", "application/json")
           .send({
-            name: "new Account",
-            initialBalance: 300
+            name: "salary",
+            type: "income"
           })
           .expect(201)
           .expect(res => {
+            // console.log(res);
             console.log(res.body);
-            expect(res.body.name).toBe("new Account");
+            // expect(res.body._id).toBe(transaction._id.toString());
+            // expect(res.body.user).toBe(transaction.user.toString());
           })
           .end(done);
       });
   });
+
+  it('updateGrouping', done => {
+
+    Grouping.findOne({})
+      .then(grouping => {
+        getToken(app, token =>{
+          request(app)
+            .put('/api/grouping')
+            .set('x-auth', token)
+            .send({
+              _id: grouping._id,
+              name: 'udapted'
+            })
+            .expect(200)
+            .expect(res => {
+              console.log(res.body);
+            })
+            .end(done);
+        });
+      }).catch(error => {
+        console.log(error);
+        done(error);
+      } );
+
+  });
+
+  it('should delete grouping', done =>{
+
+    Grouping.findOne({})
+      .then(grouping => {
+        getToken(app, token =>{
+          request(app)
+            .delete(`/api/grouping/${grouping._id}`)
+            .set('x-auth', token)
+
+            .expect(200)
+            .end((err, res )=> {
+              request(app)
+                .get('/api/grouping')
+                .set('x-auth', token)
+                .expect(res =>{
+                  console.log(res.body);
+                })
+                .end(done);
+            });
+        });
+      }).catch(error => console.log(error));
+  });
+
 });

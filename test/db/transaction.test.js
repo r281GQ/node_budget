@@ -10,6 +10,21 @@ const expect = require('expect');
 const _ = require('lodash');
 
 describe('Transaction', () => {
+
+  afterEach(done => {
+    Transaction.remove({})
+      .then(() =>
+        Promise.all([
+          Account.remove({}),
+          Grouping.remove({}),
+          Equity.remove({}),
+          Budget.remove({}),
+          User.remove({})
+        ])
+      )
+      .then(() => done())
+      .catch(error => done(error));
+  });
     beforeEach(done => {
         Promise.all([Account.remove({}), Transaction.remove({}), Grouping.remove({}), User.remove({})])
             .then(() => {

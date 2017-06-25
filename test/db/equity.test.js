@@ -132,6 +132,19 @@ describe("equity", () => {
 
         equity.user = user;
 
+
+
+        return Promise.all([
+          User.findOne({}),
+          account.save(),
+          grouping.save(),
+          equity.save()
+          // tx.save()
+        ]);
+      })
+      .then(dependencies => {
+
+
         let tx = new Transaction({
           name: "test",
           amount: 50,
@@ -139,17 +152,15 @@ describe("equity", () => {
           memo: "test porpuses"
         });
 
-        tx.user = user;
-        tx.account = account;
-        tx.equity = equity;
-        tx.grouping = grouping;
+        tx.user = dependencies[0];
+        tx.account = dependencies[1];
+        tx.equity = dependencies[3];
+        tx.grouping = dependencies[2];
 
-        return Promise.all([
-          account.save(),
-          grouping.save(),
-          equity.save(),
-          tx.save()
-        ]);
+
+
+
+        return tx.save();
       })
       .then(() => {
         return Equity.findOne({ name: "debt" });

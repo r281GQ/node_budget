@@ -65,7 +65,7 @@ BudgetSchema.methods.balances = function() {
   return new Promise((resolve, reject) => {
     Transaction.find({ budget: budget }).then(transactions => {
       let array = _.map(bps, bp =>
-        _.extend({}, _.pick(bp, ["allowance", "month"]), {
+        _.extend({}, _.pick(bp, ['_id',"allowance", "month"]), {
           monthlyBalance:
             _.reduce(
               _.map(

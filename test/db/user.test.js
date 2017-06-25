@@ -1,5 +1,5 @@
 const { mongoose } = require("./../../src/db/mongooseConfig");
-const { User } = require("./../../src/db/user");
+const { User, Transaction, Account, Equity, Budget, Grouping } = require("./../../src/db/models");
 
 const expect = require("expect");
 const _ = require("lodash");
@@ -7,6 +7,21 @@ const _ = require("lodash");
 describe("User", () => {
   beforeEach(done => {
     User.remove({}).then(() => done()).catch(error => console.log(error));
+  });
+
+  afterEach(done => {
+    Transaction.remove({})
+      .then(() =>
+        Promise.all([
+          Account.remove({}),
+          Grouping.remove({}),
+          Equity.remove({}),
+          Budget.remove({}),
+          User.remove({})
+        ])
+      )
+      .then(() => done())
+      .catch(error => done(error));
   });
 
   it("should be persisted to database", done => {

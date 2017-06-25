@@ -8,7 +8,9 @@ const handleGetAllAccounts = (request, response) => {
   let accountsToSend;
 
   let { loggedInUser } = request;
+  console.log(loggedInUser);
   Account.find({ user: loggedInUser._id })
+
     .sort({ name: 1 })
     .then(accounts => {
         accountsToSend = accounts;
@@ -19,6 +21,7 @@ const handleGetAllAccounts = (request, response) => {
         );
     })
     .then(currentBalances => {
+      console.log('HERE');
       let reduced = _.map(accountsToSend, account =>
         pickPropertiesForAccount(account)
       );
@@ -114,7 +117,7 @@ const handleGetAccount = (request, response) => {
 
       return response.status(200).send(reducedAccount);
     })
-    .catch(error => response.sendStatus(500));
+    .catch(error => response.status(500).send({error: error.message}));
 };
 
 const handleDeleteAccount = (request, response) => {

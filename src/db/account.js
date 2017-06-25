@@ -49,7 +49,10 @@ AccountSchema.methods.currentBalance = function() {
         // console.log(total);
         resolve(total);
       })
-      .catch(error => reject(error));
+      .catch(error => {
+        console.log('eroror from ',error);
+        reject(error);
+      } );
   });
 };
 

@@ -8,7 +8,7 @@ const { mongoose } = require("./db/mongooseConfig");
 
 const { updateTransction } = require("./db/queries/transaction-update");
 
-const { accountRoutes } = require("./../src/routes/routes");
+const { modelRoutes } = require("./../src/routes/routes");
 
 const {
   Equity,
@@ -36,18 +36,20 @@ app.use(bodyParser.json());
 
 app.use(cors(corsConfig));
 
-app.use(`${BASE_URL}${ACCOUNT_BASE_URL}`, accountRoutes);
+app.get('/api/whoAmI'  ,(request, response) => {
+  let token = request.header("x-auth");
+  jwt.verify(token, secret, (error, loggedInUser) => {
+    if (error){
+      console.log(error);
+      return response
+        .status(403)
+        .send({
+          message: "Authentication token is not present or is invalid!"
+        });
+    }
 
-// app.use(function(req, res, next) {
-//   res.setHeader("Access-Control-Allow-Origin", 'http://localhost:3000');
-//   res.setHeader('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,DELETE');
-//   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Accept,x-auth');
-//
-//   next();
-// });
-
-app.listen(2000, () => {
-  console.log("Server started on port: " + 2000);
+    return response.status(200).send(loggedInUser);
+  });
 });
 
 app.post("/api/signUp", (request, response) => {
@@ -72,12 +74,13 @@ app.post("/api/signUp", (request, response) => {
 });
 
 app.post("/api/logIn", (request, response) => {
+  // console.log('sdfs');
+  if(!request.body.email || !request.body.password)
+    return response.status(400).send({message: 'Email and password must be present in the request!'})
   let { email } = request.body;
   User.findOne({ email })
     .then(user => {
-
       let { password } = user;
-
       if (password === request.body.password) {
         let userToSend = _.pick(user, ["_id", "name", "email"]);
         let token = jwt.sign(userToSend, secret);
@@ -87,26 +90,14 @@ app.post("/api/logIn", (request, response) => {
 
       return response.status(401).send({ message: "Wrong password provided!" });
     })
-    .catch(() => response.status(404).send({ message: "No such user!" }));
+    .catch((error) => response.status(404).send({ message: error }));
 });
+// app.use(`${BASE_URL}${ACCOUNT_BASE_URL}`, routes);
+app.use(`${BASE_URL}`, modelRoutes);
 
-// app.post("/api/grouping", authMiddleWare, (request, response) => {
-//
-//   let grouping = new Grouping({
-//     name: request.body.name,
-//     type: request.body.type
-//   });
-//
-//   grouping.user = request.loggedInUser._id;
-//
-//   grouping
-//     .save()
-//     .then(gr => {
-//       response.status(201).send(_.pick(gr, ["name", "type", "_id", "user"]));
-//     })
-//     .catch(error => console.log(error));
-// });
-//
+app.listen(2000, () => {
+  console.log("Server running on port: " + 2000);
+});
 // app.put("/api/equities", authMiddleWare, (req, res) => {
 //   let { _id, name, initialBalance } = req.body;
 //   let userID = req.loggedInUser._id;
@@ -173,137 +164,7 @@ app.post("/api/logIn", (request, response) => {
 //     });
 // });
 //
-// app.get("/api/grouping/:id", authMiddleWare, (req, res) => {
-//   let accountsToSend;
 //
-//   Grouping.findOne({ _id: req.params["id"] })
-//     .then(gr => {
-//       if (!gr.user.equals(req.loggedInUser._id)) return res.sendStatus(403);
-//
-//       return res.status(200).send(gr);
-//     })
-//     .catch(error => res.sendStatus(500));
-//
-// });
-//
-// app.get("/api/transaction", authMiddleWare, (request, response) => {
-//   let { loggedInUser } = request;
-//
-//   Transaction.find({ user: loggedInUser._id })
-//     .populate("user account grouping equity")
-//     .then(transactions => {
-//       return response.status(200).send(transactions);
-//     })
-//     .catch(error => response.status(500).send(error));
-// });
-//
-// app.put("/api/transaction", authMiddleWare, (request, response) => {
-//   let oldTransactionId = request.body._id;
-//
-//   let tobesentback;
-//   Transaction.findOne({ _id: oldTransactionId })
-//     .populate("grouping")
-//     .then(transaction => {
-//       tobesentback = _.pick(_.cloneDeep(transaction), ["date", "_id", "user"]);
-//
-//       tobesentback.account = request.body.account;
-//       tobesentback.grouping = request.body.grouping;
-//       tobesentback.amount = request.body.amount;
-//       tobesentback.name = request.body.name;
-//
-//       if (request.body.equity) tobesentback.equity = request.body.equity;
-//
-//       if (request.body.budget) tobesentback.budget = request.body.budget;
-//
-//       return transaction.remove();
-//     })
-//     .then(() => {
-//       let news = new Transaction({
-//         _id: tobesentback._id,
-//         name: tobesentback.name,
-//         date: tobesentback.date,
-//         amount: tobesentback.amount
-//       });
-//       news.account = tobesentback.account;
-//       news.grouping = tobesentback.grouping;
-//       news.user = tobesentback.user;
-//
-//       return news.save();
-//     })
-//     .then(updatedTransaction => response.status(200).send(updatedTransaction))
-//     .catch(error => console.log(error));
-// });
-//
-//
-//
-// app.post("/api/transaction", authMiddleWare, (request, response) => {
-//   let tx = new Transaction({
-//     name: request.body.name,
-//     amount: request.body.amount
-//   });
-//   tx.user = request.loggedInUser._id;
-//   tx.account = request.body.account;
-//   tx.grouping = request.body.grouping;
-//
-//   tx
-//     .save()
-//     .then(tx => {
-//       return response.status(201).send(tx);
-//     })
-//     .catch(err => {
-//       // console.log(err);
-//
-//       // if(err.message === 'Account balance is too low!')
-//       if (_.includes(err.message, "Account balance is too low!"))
-//         return response.status(409).send({ message: err.message });
-//       return response.sendStatus(500);
-//     });
-// });
-//
-// app.delete("/api/transaction/:id", authMiddleWare, (request, response) => {
-//   Transaction.findOne({ _id: request.params["id"] })
-//     .then(transaction => {
-//       if (!transaction.user.equals(request.loggedInUser._id))
-//         return response.sendStatus(403);
-//       return transaction.remove();
-//     })
-//     .then(() => {
-//       return response.sendStatus(200);
-//     })
-//     .catch(error => response.sendStatus(500));
-// });
-//
-// app.delete("/api/account/:id", authMiddleWare, (request, response) => {
-//   Account.findOne({ _id: request.params["id"] })
-//     .then(account => {
-//       if (account.user.toString() !== request.loggedInUser._id)
-//         return response.sendStatus(403);
-//       return account.remove();
-//     })
-//     .then(() => {
-//       return response.sendStatus(200);
-//     })
-//     .catch(error => response.sendStatus(500));
-// });
-//
-// app.get("/api/account/:id", authMiddleWare, (request, response) => {
-//   let ac;
-//
-//   Account.findOne({ _id: request.params["id"] })
-//     .then(account => {
-//       if (account.user.toString() !== request.loggedInUser._id)
-//         return response.sendStatus(403);
-//
-//       ac = account;
-//       return account.currentBalance();
-//     })
-//     .then(balance => {
-//       response
-//         .status(200)
-//         .send(_.extend(_.pick(ac, [ "_id","name", "user", "balance"]), { currentBalance: balance }));
-//     })
-//     .catch(error => response.sendStatus(500));
-// });
 //
 // app.put(`/api/budget`, authMiddleWare, (request, response) => {
 //   if (request.loggedInUser._id !== budget.user.toString())
@@ -323,73 +184,8 @@ app.post("/api/logIn", (request, response) => {
 //
 //
 //
-// app.get('/api/budget/:id', authMiddleWare, (request, response) => {
-//
-//   let tosen;
-//   Budget.findOne({ _id: request.params["id"] })
-//     .then(budget => {
-//       if (request.loggedInUser._id !== budget.user.toString())
-//         return response.sendStatus(403);
-//         tosen = budget;
-//         console.log(budget.budgetPeriods);
-//       return budget.balances();
-//     })
-//     .then(balances => {
-//       console.log('balance:',  balances);
-//
-//       // console.log(_.pick(budget, ["name", "budgetPeriods"]));
-//
-//     return response
-//       .status(200)
-//       .send({});
-//     })
-//     .catch(() => response.sendStatus(404));
-// });
-//
-// app.get('/api/transaction/:id', authMiddleWare, (request, response)=>{
-//
-//   Transaction.findOne({_id: request.params['_id']})
-//     .then(transaction => {
-//
-//         if(!transaction.user.equals(request.loggedInUser._id))
-//           response.status(403).send();
-//
-//       response.status(200).send(_.pick(transaction, ['_id', 'amount', 'user', 'account', 'grouping', 'memo', 'creationDate', 'currency']))
-//     })
-//
-//     .catch(error => response.status(500).send({error: 'error'}));
 //
 //
-// });
-//
-// app.post('/api/budget', authMiddleWare, (request, response)=>{
-//   let { name, currency, defaultAllowance } = request.body;
-//
-//   let userId = request.loggedInUser._id;
-//    let intermediate;
-//   let budget = new Budget({
-//     name,
-//     currency,
-//     defaultAllowance
-//   });
-//   budget.user = userId;
-//
-//   budget.save()
-//     .then(bugset => {
-//       intermediate = bugset;
-//       return budget.balances();
-//     })
-//     .then(balances=> {
-//       let g = _.pick(intermediate, ['_id', 'name', 'currency']);
-//       g.budgetPeriods = balances;
-//       response.status(201).send(g);
-//     })
-//     .catch(error => {
-//       response.status(500).send({error: ''});
-//     });
-//
-//
-// });
 //
 // app.delete('/api/budget/:id', authMiddleWare, (request, response)=>{
 //
@@ -410,35 +206,7 @@ app.post("/api/logIn", (request, response) => {
 //     });
 // });
 //
-// app.get('/api/budget', authMiddleWare, (request, response)=>{
 //
-//   let { loggedInUser } = request;
-//
-//   let intermediate;
-//
-//   //merge needs an object to assicate with an onther array same object
-//
-//   Budget.find({ user: loggedInUser._id })
-//     .then(budgets => {
-//       intermediate = budgets;
-//       return Promise.all(_.map(budgets, budget => budget.balances()));
-//     })
-//     .then(enhancedBPS => {
-//       // console.log(enhancedBPS);
-//       let enhancedBPS1 = _.map(enhancedBPS, bps => {
-//         return { bps };
-//       });
-//       // console.log(enhancedBPS1);
-//       let tosend = _.map(intermediate, budget => _.pick(budget, ['name', 'currency', 'user', 'defaultAllowance']));
-//       // console.log(tosend);
-//       let fine = _.merge(tosend, enhancedBPS1);
-//       // console.log(enhancedBPS);
-//       // console.log(fine);
-//       response.status(200).send(fine);
-//     })
-//     .catch((err) => response.status(500).send({}));
-//
-// });
 //
 // app.put('/api/user', authMiddleWare, (request, response)=>{
 //
@@ -502,25 +270,6 @@ app.post("/api/logIn", (request, response) => {
 //     })
 //     .then(gr=> response.status(200).send(gr))
 //     .catch(error => {});
-// });
-//
-// app.delete('/api/grouping/:id', authMiddleWare, (request, response)=>{
-//
-//   let { loggedInUser } = request;
-//   let _id = request.params['id'];
-//
-//   Grouping.findOne({ _id })
-//     .then( grouping => {
-//
-//       if(!grouping.user.equals(loggedInUser._id))
-//         response.status(403).send({error: 'auth'});
-//
-//       return grouping.remove();
-//     })
-//     .then(gr=> response.status(200).send(gr))
-//     .catch(error => {});
-//
-//
 // });
 //
 // app.get('/api/grouping', authMiddleWare, (request, response)=>{
