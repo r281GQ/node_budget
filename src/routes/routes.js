@@ -18,7 +18,7 @@ const {
 
 const {
   handlePostTransaction,
-  handleGetAllTransaction,
+  handleGetAllTransactions,
   handlePutTransaction,
   handleDeleteTransaction,
   handleGetTransaction
@@ -54,7 +54,7 @@ router.delete(`/${GROUPING_BASE_URL}/:id`, handleDeleteGrouping);
 router.get(`/${GROUPING_BASE_URL}/:id`, handleGetGrouping);
 
 router.post(`/${TRANSACTION_BASE_URL}`, handlePostTransaction);
-router.get(`/${TRANSACTION_BASE_URL}`, handleGetAllTransaction);
+router.get(`/${TRANSACTION_BASE_URL}`, handleGetAllTransactions);
 router.put(`/${TRANSACTION_BASE_URL}`, handlePutTransaction);
 router.delete(`/${TRANSACTION_BASE_URL}/:id`, handleDeleteTransaction);
 router.get(`/${TRANSACTION_BASE_URL}/:id`, handleGetTransaction);

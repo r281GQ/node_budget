@@ -9,6 +9,8 @@ const { User, Equity, Budget } = require('./../../src/db/models');
 const expect = require('expect');
 const _ = require('lodash');
 
+let __user, __account, __grouping;
+
 describe('Transaction', () => {
 
   afterEach(done => {
@@ -36,7 +38,10 @@ describe('Transaction', () => {
 
                 return user.save();
             })
-            .then(() => done())
+            .then((user) => {
+              __user = user;
+              done();
+            } )
             .catch(error => done(error));
     });
 
@@ -49,26 +54,33 @@ describe('Transaction', () => {
                     initialBalance: 5
                 });
 
-                account.user = user;
+                account.user = __user;
 
                 let grouping = new Grouping({
                     name: 'salary',
                     type: 'income'
                 });
 
-                grouping.user = user;
+                grouping.user = __user;
 
-                let transaction = new Transaction({
-                    name: 'current rent',
-                    amount: 10,
-                    currency: 'GBP'
-                });
 
-                transaction.account = account;
-                transaction.grouping = grouping;
-                transaction.user = user;
 
-                return Promise.all([account.save(), grouping.save(), transaction.save()])
+                return Promise.all([account.save(), grouping.save()])
+            })
+            .then(dep => {
+              __account = dep[0];
+              __grouping = dep[1];
+
+              let transaction = new Transaction({
+                  name: 'current rent',
+                  amount: 10,
+                  currency: 'GBP'
+              });
+
+              transaction.account = __account;
+              transaction.grouping = __grouping;
+              transaction.user = __user;
+              return transaction.save();
             })
             .then(() => {
                 return Account.findOne({ name: 'main' });
@@ -100,15 +112,15 @@ describe('Transaction', () => {
 
                 grouping.user = user;
 
-                let transaction = new Transaction({
-                    name: 'current rent',
-                    amount: 10,
-                    currency: 'GBP'
-                });
-
-                transaction.account = account;
-                transaction.grouping = grouping;
-                transaction.user = user;
+                // let transaction = new Transaction({
+                //     name: 'current rent',
+                //     amount: 10,
+                //     currency: 'GBP'
+                // });
+                //
+                // transaction.account = account;
+                // transaction.grouping = grouping;
+                // transaction.user = user;
 
                 return Promise.all([account.save(), grouping.save(), User.findOne({})])
             })
@@ -133,7 +145,7 @@ describe('Transaction', () => {
             .catch(error => new Promise((resolve, reject) => resolve(error)))
             .then(error => {
 
-                expect(error.message).toBe('Account balance is too low!');
+                expect(error.message).toBe('On creating modifying or deleting a transaction would result in insufficient balance on one of the accounts.');
                 done();
             });
     });
@@ -201,7 +213,7 @@ describe('Transaction', () => {
                 });
             })
             .then(error => {
-                expect(error.message).toBe('Account balance is too low!');
+                expect(error.message).toBe('On creating modifying or deleting a transaction would result in insufficient balance on one of the accounts.');
                 done();
             });
     });

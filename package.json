@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "serve": "NODE_ENV=DEVELOPMENT nodemon src/index.js",
-    "test": "NODE_ENV=TEST nodemon --exec 'mocha --timeout 5000 --recursive -R min test/**/**.test.js'"
+    "test": "NODE_ENV=TEST nodemon --exec 'mocha  --recursive -R min test/**/**.test.js'"
   },
   "author": "Endre Vegh",
   "license": "ISC",

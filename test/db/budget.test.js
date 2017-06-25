@@ -10,6 +10,8 @@ const expect = require("expect");
 const moment = require("moment");
 const _ = require("lodash");
 
+let __user;
+
 describe("Budget", () => {
   afterEach(done => {
     Transaction.remove({})
@@ -42,7 +44,10 @@ describe("Budget", () => {
 
         return user.save();
       })
-      .then(() => done())
+      .then((user) =>{
+        __user = user;
+        done();
+      } )
       .catch(error => done(error));
   });
 
@@ -53,7 +58,7 @@ describe("Budget", () => {
       .then(user => {
         let account = new Account({
           name: "main",
-          initialBalance: 5
+          initialBalance: 15
         });
 
         let budget = new Budget({
@@ -64,34 +69,38 @@ describe("Budget", () => {
           // ]
         });
 
-        budget.user = user;
+        budget.user = __user._id;
 
-        account.user = user;
+        account.user =  __user._id;
 
         let grouping = new Grouping({
           name: "salary",
-          type: "income"
+          type: "expense"
         });
 
         grouping.user = user;
 
+
+
+        return Promise.all([
+          budget.save(),
+          account.save(),
+          grouping.save(),
+          // transaction.save()
+        ]);
+      })
+      .then(dep => {
         let transaction = new Transaction({
           name: "current rent",
           amount: 10,
           currency: "GBP"
         });
 
-        transaction.account = account;
-        transaction.grouping = grouping;
-        transaction.user = user;
-        transaction.budget = user;
-
-        return Promise.all([
-          budget.save(),
-          account.save(),
-          grouping.save(),
-          transaction.save()
-        ]);
+        transaction.account = dep[1];
+        transaction.grouping = dep[2];
+        transaction.user =  __user._id;
+        transaction.budget = dep[0];
+        return transaction.save();
       })
       .then(() => {
         return Budget.findOne({});

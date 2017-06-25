@@ -1,22 +1,32 @@
 const _ = require("lodash");
-const objectIDValidator = require('mongoose').Types.ObjectId.isValid;
-const { Transaction, Grouping, Account } = require("./../../db/models");
 
-const handleGetAllTransaction = (request, response) => {
+const { Transaction, Grouping, Account, Budget, Equity } = require("./../../db/models");
+const {
+  ID_INVALID_OR_NOT_PRESENT,
+  FORBIDDEN_RESOURCE,
+  RESOURCE_NOT_FOUND,
+  SERVER_ERROR,
+  ACCOUNT_BALANCE,
+  DEPENDENCIES_NOT_MET,
+  BUDGET_INCOME_CONFLICT
+} = require("./error_messages");
+
+const idValidator = _id => (_id ? /^[0-9a-fA-F]{24}$/.test(_id) : false);
+
+const handleGetAllTransactions = (request, response) => {
   let { loggedInUser } = request;
-
-
 
   Transaction.find({ user: loggedInUser._id })
     .then(transactions => {
       return response.status(200).send(transactions);
     })
     .catch(error => {
-      return response.status(500).send({});
+      return response.status(500).send({ error: SERVER_ERROR });
     });
 };
 
 const handlePutTransaction = (request, response) => {
+  let user = request.loggedInUser._id;
   let {
     _id,
     name,
@@ -28,15 +38,8 @@ const handlePutTransaction = (request, response) => {
     currency
   } = request.body;
 
-  if (!_id) return response.status(409).send({ error: "_id must be provided" });
-
-  // const _id = request.params["_id"];
-
-  // if(!objectIDValidator(_id)){
-  //   console.log(objectIDValidator(_id));
-  //   return response.status(400).send({});
-  // }
-  // if( !id || !name ||  !am)
+  if (!idValidator(_id))
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
 
   let newTransaction = {
     _id,
@@ -49,29 +52,25 @@ const handlePutTransaction = (request, response) => {
     currency
   };
 
-  console.log("GGGGGGGGGGGGGG", budget);
-  let transaction, newAccount, newGrouping;
+  let transaction, new_account, newGrouping;
 
   let tobesentback;
 
   Promise.all([
-    Transaction.findOne({ _id }).populate("account grouping"),
+    Transaction.findOne({ _id, user }).populate("account grouping"),
     Account.findOne({ _id: account }),
     Grouping.findOne({ _id: grouping })
   ])
-    .then(stuff => {
-      transaction = stuff[0];
-      newAccount = stuff[1];
-      newGrouping = stuff[2];
-      console.log(newGrouping.type);
-      console.log(budget);
-      if (newGrouping.type === "income" && budget) {
-        console.log("shiuld be rejeced");
-        return Promise.reject("stuff");
-      }
+    .then(queries => {
+
+      transaction = queries[0];
+      if(!transaction)
+        return Promise.reject({message: RESOURCE_NOT_FOUND})
+      new_account = queries[1];
+      newGrouping = queries[2];
       tobesentback = _.pick(_.cloneDeep(transaction), ["date", "_id", "user"]);
       return Promise.all([
-        newAccount.currentBalance(),
+        new_account.currentBalance(),
         transaction.account.currentBalance()
       ]);
     })
@@ -89,7 +88,7 @@ const handlePutTransaction = (request, response) => {
       let oldAccountId = transaction.account._id;
       let oldGrouping = transaction.grouping;
 
-      let areAccountstheSame = oldAccountId.equals(newAccount._id);
+      let areAccountstheSame = oldAccountId.equals(new_account._id);
 
       //TODO: actually only ttpyes need to be the same
       // let areGroupingsstheSame = oldGrouping._id.equals(newGrouping._id);
@@ -116,7 +115,7 @@ const handlePutTransaction = (request, response) => {
           if (budget) tobesentback.budget = budget;
           return Transaction.remove({ _id });
         } else {
-          return Promise.reject("balance");
+          return Promise.reject(ACCOUNT_BALANCE);
         }
       }
 
@@ -141,10 +140,7 @@ const handlePutTransaction = (request, response) => {
           if (budget) tobesentback.budget = budget;
           return Transaction.remove({ _id });
         } else {
-          console.log("error");
-          // return response.status(302).send({r: 'dfgdf'});
-          // return new Error('wont be enough stex');
-          return Promise.reject("balance");
+          return Promise.reject(ACCOUNT_BALANCE);
         }
       }
 
@@ -178,7 +174,7 @@ const handlePutTransaction = (request, response) => {
           console.log("error");
           // return response.status(302).send({r: 'dfgdf'});
           // return new Error('wont be enough stex');
-          return Promise.reject("balance");
+          return Promise.reject(ACCOUNT_BALANCE);
         }
       }
 
@@ -279,7 +275,7 @@ const handlePutTransaction = (request, response) => {
           console.log("error");
           // return response.status(302).send({r: 'dfgdf'});
           // return new Error('wont be enough stex');
-          return Promise.reject("balance");
+          return Promise.reject(ACCOUNT_BALANCE);
         }
       }
 
@@ -382,15 +378,13 @@ const handlePutTransaction = (request, response) => {
       return response.status(200).send(sendabel);
     })
     .catch(error => {
-      console.log('from put', error.name);
-      // if(error.name === 'CastError')
-        return response.status(500).send({});
-      // switch (error) {
-      //   case "balance":
-      //     return response.status(409).send({ error: "balace" });
-      //   default:
-      //     return response.status(500);
-      // }
+      // return response.status(409).send({});
+      switch (error) {
+        case ACCOUNT_BALANCE:
+          return response.status(409).send({ error: "balace" });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
     });
 };
 
@@ -407,64 +401,100 @@ const handlePostTransaction = (request, response) => {
     memo
   } = request.body;
 
-  let tx = new Transaction({
+  let transaction = new Transaction({
     name,
     amount,
     memo,
     currency
   });
-  Grouping.findOne({ _id: grouping })
-    .then(gr => {
-      if (gr.type === "income" && budget) return Promise.reject("");
-      tx.user = loggedInUser._id;
-      tx.account = account;
-      tx.grouping = gr;
-      return tx.save();
+
+  transaction.user = loggedInUser._id;
+  transaction.account = account;
+  transaction.grouping = grouping;
+
+  if (budget) transaction.budget = budget;
+  if (equity) transaction.equity = equity;
+
+  if (
+    !idValidator(grouping) ||
+    !idValidator(account) ||
+    (budget && !idValidator(budget)) ||
+    (equity && !idValidator(equity))
+  )
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
+
+  transaction
+    .save()
+    .then(transaction => {
+      const toSend = _.pick(transaction, [
+        "_id",
+        "name",
+        "amount",
+        "memo",
+        "date",
+        "currency",
+        "account",
+        "grouping",
+        "budget",
+        "equity"
+      ]);
+      return response.status(201).send(toSend);
     })
-    .then(ty => {
-      return Transaction.findOne({ _id: ty._id });
-    })
-    // console.log(tx);
-    // tx
-    //   .save()
-    .then(tx => {
-      return response.status(201).send(tx);
-    })
-    .catch(err => {
-      // console.log('has been created');
-      // console.log('ERROR', err);
-      if (_.includes(err.message, "Account balance is too low!"))
-        return response.status(409).send({ message: err.message });
-      return response.sendStatus(500);
+    .catch(error => {
+      switch (error.message) {
+        case ACCOUNT_BALANCE:
+          return response.status(400).send({ error: ACCOUNT_BALANCE });
+        case DEPENDENCIES_NOT_MET:
+          return response.status(400).send({ error: DEPENDENCIES_NOT_MET });
+        case BUDGET_INCOME_CONFLICT:
+          return response.status(400).send({ error: BUDGET_INCOME_CONFLICT });
+        case RESOURCE_NOT_FOUND:
+          return response.status(400).send({ error: RESOURCE_NOT_FOUND });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
     });
 };
 
 const handleDeleteTransaction = (request, response) => {
-  Transaction.findOne({ _id: request.params["id"] })
+  const _id = request.params["id"];
+  if (!idValidator(_id))
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
+
+  Transaction.findOne({ _id })
     .then(transaction => {
+      if (!transaction) return Promise.reject({ message: RESOURCE_NOT_FOUND });
       if (!transaction.user.equals(request.loggedInUser._id))
-        return response.sendStatus(403);
+        return Promise.reject({ message: FORBIDDEN_RESOURCE });
       return transaction.remove();
     })
     .then(() => {
       return response.sendStatus(200);
     })
     .catch(error => {
-      response.status(409).send({ error: "not anouth balance on account" });
+      switch (error.message) {
+        case RESOURCE_NOT_FOUND:
+          return response.status(404).send({ error: RESOURCE_NOT_FOUND });
+        case FORBIDDEN_RESOURCE:
+          return response.status(403).send({ error: FORBIDDEN_RESOURCE });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
     });
 };
 
 const handleGetTransaction = (request, response) => {
+  const _id = request.params["id"];
 
-  const _id = request.params["_id"];
-
-  if(!objectIDValidator(_id))
-    return response.status(400).send({});
+  if (!idValidator(_id))
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
 
   Transaction.findOne({ _id })
     .then(transaction => {
+      if (!transaction)
+        return response.status(404).send({ error: RESOURCE_NOT_FOUND });
       if (!transaction.user.equals(request.loggedInUser._id))
-        response.status(403).send();
+        return response.status(403).send({ error: FORBIDDEN_RESOURCE });
 
       response
         .status(200)
@@ -475,19 +505,21 @@ const handleGetTransaction = (request, response) => {
             "user",
             "account",
             "grouping",
+            "budget",
+            "equity",
             "memo",
-            "creationDate",
+            "date",
             "currency"
           ])
         );
     })
-    .catch(error => response.status(500).send({ error: "error" }));
+    .catch(error => response.status(500).send({ error: SERVER_ERROR }));
 };
 
 module.exports = {
   handleDeleteTransaction,
   handlePutTransaction,
   handlePostTransaction,
-  handleGetAllTransaction,
+  handleGetAllTransactions,
   handleGetTransaction
 };

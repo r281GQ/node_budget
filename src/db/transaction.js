@@ -1,9 +1,17 @@
 const moment = require("moment");
+const _ = require("lodash");
 
 const { mongoose } = require("./mongooseConfig");
 const { currencyValidator } = require("./validators");
-
-const _ = require("lodash");
+const {
+  ID_INVALID_OR_NOT_PRESENT,
+  FORBIDDEN_RESOURCE,
+  RESOURCE_NOT_FOUND,
+  SERVER_ERROR,
+  ACCOUNT_BALANCE,
+  DEPENDENCIES_NOT_MET,
+  BUDGET_INCOME_CONFLICT
+} = require("./../routes/routeHandlers/error_messages");
 
 const Schema = mongoose.Schema;
 
@@ -15,7 +23,8 @@ let TransactionSchema = new Schema({
   },
   amount: {
     type: Number,
-    required: true
+    required: true,
+    trim: true
   },
   currency: {
     type: String,
@@ -61,17 +70,53 @@ let TransactionSchema = new Schema({
 
 TransactionSchema.pre("save", function(next) {
   let transaction = this;
+  let Grouping = mongoose.model("Grouping");
+
+  Grouping.findOne({ _id: transaction.grouping, user: transaction.user })
+    .then(grouping => {
+      if (!grouping) return next(new Error(DEPENDENCIES_NOT_MET));
+      if (grouping.type === "income" && transaction.budget)
+        return next(new Error(BUDGET_INCOME_CONFLICT));
+      return next();
+    })
+    .catch(error => {
+      next(error);
+    });
+});
+
+TransactionSchema.pre("save", function(next) {
+  let transaction = this;
+  let Budget = mongoose.model("Budget");
+
+  if (!transaction.budget) next();
+
+  Budget.findOne({ _id: transaction.budget, user: transaction.user })
+    .then(grouping => {
+      if (!grouping) return next(new Error(RESOURCE_NOT_FOUND));
+      next();
+    })
+    .catch(error => {
+      next(error);
+    });
+});
+
+TransactionSchema.pre("save", function(next) {
+  let transaction = this;
   let Account = mongoose.model("Account");
 
-  Account.findOne({ _id: transaction.account })
+  Account.findOne({ _id: transaction.account, user: transaction.user })
     .then(account => {
+      if (!account) return next(new Error(DEPENDENCIES_NOT_MET));
       if (transaction.grouping.type === "income") return next();
       return account.currentBalance();
     })
     .then(currentBalance => {
       if (currentBalance - transaction.amount < 0)
-        return next(new Error("Account balance is too low!"));
+        return next(new Error(ACCOUNT_BALANCE));
       next();
+    })
+    .catch(error => {
+      next(error);
     });
 });
 
@@ -81,7 +126,7 @@ TransactionSchema.pre("save", function(next) {
 //   let Budget = mongoose.model("Budget");
 //
 //   if (!transaction.budget) return next();
-// 
+//
 //   Budget.findOne({ _id: transaction.budget })
 //     .then(budget => {
 //       let has = false;
@@ -127,11 +172,10 @@ TransactionSchema.pre("remove", function(next) {
     })
     .then(currentBalance => {
       if (currentBalance - transaction.amount < 0)
-        return next(new Error("Account balance is too low!"));
+        return next(new Error(ACCOUNT_BALANCE));
       next();
     })
     .catch(error => {
-      console.log("AINT IN HERE");
       next(error);
     });
 });

@@ -12,7 +12,7 @@ const mongoose = require("./../../src/db/mongooseConfig");
 const _ = require("lodash");
 const expect = require("expect");
 
-describe("equity", () => {
+xdescribe("equity", () => {
 
   afterEach(done => {
     Transaction.remove({})
