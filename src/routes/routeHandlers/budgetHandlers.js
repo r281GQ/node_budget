@@ -23,7 +23,7 @@ const handlePostBudget = (request, response)=>{
     })
     .then(balances=> {
       let g = {};
-      _.forEach(intermediate.budgetPeriods, bps => {
+      _.forEach(balances, bps => {
 
         g[bps._id] = bps;
       });
@@ -75,8 +75,67 @@ const handleGetAllBudgets = (request, response)=>{
       .catch((err) => response.status(500).send({}));
 
 };
-const handlePutBudget = ()=>'';
-const handleDeleteBudget = ()=>'';
+const handlePutBudget = (request, response)=>{
+  // console.log(request.body._id);
+    // if (request.loggedInUser._id !== budget.user.toString())
+    //   return response.sendStatus(403);
+let intermediate;
+    Budget.findOneAndUpdate({_id: request.body._id, user: request.loggedInUser._id, }, {$set: {name: request.body.name }  }, {new: true})
+      .then(budget => {
+        if(!budget)
+          response.status(404).send({});
+          intermediate = budget;
+          return budget.balances();
+      })
+      .then(balances => {
+        let g = {};
+        _.forEach(balances, bps => {
+
+          g[bps._id] = bps;
+        });
+        let f = _.pick(intermediate, ['_id', 'name', 'currency', 'defaultAllowance']);
+        f.budgetPeriods = g;
+        console.log(f);
+        // response.status(201).send(f);
+        response.status(200).send(f);
+      })
+      .catch(error => {
+        console.log(error);
+      });
+};
+
+// const handlePutBudgetPeriod = (request, response)=>{
+//   // console.log(request.body._id);
+//     // if (request.loggedInUser._id !== budget.user.toString())
+//     //   return response.sendStatus(403);
+//
+//     Budget.findOneAndUpdate({_id: request.body._id, user: request.loggedInUser._id, }, {$set: {name: request.body.name }  }, {new: true})
+//       .then(budget => {
+//         if(!budget)
+//           response.status(404).send({})
+//         response.status(200).send(budget);
+//       })
+//       .catch(error => {
+//         console.log(error);
+//       });
+// };
+const handleDeleteBudget = (request, response)=>{
+    let _id = request.params['id'];
+    let loggedInUser = request.loggedInUser;
+
+    Budget.findOne({ _id })
+      .then(budget => {
+          if(!budget.user.equals(loggedInUser._id))
+            response.status(403).send();
+          return budget.remove();
+      })
+      .then(() => {
+        response.status(200).send();
+      })
+      .catch(error => {
+
+      });
+};
 const handleGetBudget = (request, response)=>{
   let tosen;
     Budget.findOne({ _id: request.params["id"] })
@@ -100,14 +159,11 @@ const handleGetBudget = (request, response)=>{
 };
 
 
-//
-// app.put(`/api/budget`, authMiddleWare, (request, response) => {
 //   if (request.loggedInUser._id !== budget.user.toString())
 //     return response.sendStatus(403);
 //
 //   // Budget.findOneAndUpdate({_id: request.body._id}, {$set: {name: request.body.name }  }, {new: true})
 //   //   .then()
-// });
 //
 //
 // app.put(`/api/budgetPeriod`, authMiddleWare, (request, response) => {

@@ -1,4 +1,4 @@
-  const _ = require("lodash");
+const _ = require("lodash");
 
 const { mongoose } = require("./mongooseConfig");
 const { currencyValidator } = require("./validators");
@@ -46,27 +46,23 @@ AccountSchema.methods.currentBalance = function() {
               : sum - transaction.amount,
           account.initialBalance
         );
-        // console.log(total);
         resolve(total);
       })
       .catch(error => {
-        console.log('eroror from ',error);
         reject(error);
-      } );
+      });
   });
 };
 
 AccountSchema.pre("remove", function(next) {
   let Transaction = mongoose.model("Transaction");
   Transaction.remove({ account: this._id })
-  .then(() => {
-    console.log('HERE');
+    .then(() => {
       next();
-  })
-  .catch(error => {
-    console.log(error);
-    next(error);
-  });
+    })
+    .catch(error => {
+      next(error);
+    });
 });
 
 let Account = mongoose.model("Account", AccountSchema);

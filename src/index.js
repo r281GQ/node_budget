@@ -2,12 +2,10 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
 const _ = require("lodash");
-const cors = require('cors');
+const cors = require("cors");
 
 const { mongoose } = require("./db/mongooseConfig");
-
 const { modelRoutes } = require("./../src/routes/routes");
-
 const {
   Equity,
   User,
@@ -16,36 +14,33 @@ const {
   Grouping,
   Budget
 } = require("./db/models");
-
-const ACCOUNT_BASE_URL = "account";
-
-const secret = "secret";
-
+const secret = require("./misc/secrets");
+const { ID_INVALID_OR_NOT_PRESENT } = require("./misc/errors");
 const BASE_URL = "/api/";
-
 const corsConfig = {
-  origin: 'http://localhost:3000',
-  allowedHeaders: ['Accept-Version', 'Authorization', 'Credentials', 'Content-Type','x-auth'],
-  exposedHeaders: ['X-Request-Id', 'x-auth'],
+  origin: "http://localhost:3000",
+  allowedHeaders: [
+    "Accept-Version",
+    "Authorization",
+    "Credentials",
+    "Content-Type",
+    "x-auth"
+  ],
+  exposedHeaders: ["X-Request-Id", "x-auth"]
 };
+
 var app = express();
-
 app.use(bodyParser.json());
-
 app.use(cors(corsConfig));
 
-app.get('/api/whoAmI'  ,(request, response) => {
+app.get("/api/whoAmI", (request, response) => {
   let token = request.header("x-auth");
   jwt.verify(token, secret, (error, loggedInUser) => {
-    if (error){
-      console.log(error);
-      return response
-        .status(403)
-        .send({
-          message: "Authentication token is not present or is invalid!"
-        });
+    if (error) {
+      return response.status(401).send({
+        error: ID_INVALID_OR_NOT_PRESENT
+      });
     }
-
     return response.status(200).send(loggedInUser);
   });
 });
@@ -63,18 +58,23 @@ app.post("/api/signUp", (request, response) => {
     .save()
     .then(user => {
       let userToSend = _.pick(user, ["_id", "name", "email"]);
-
       let token = jwt.sign(userToSend, secret);
-
-      response.set("Access-Control-Expose-Headers").set("x-auth", token).status(201).send(userToSend);
+      response
+        .set("Access-Control-Expose-Headers")
+        .set("x-auth", token)
+        .status(201)
+        .send(userToSend);
     })
-    .catch(error => response.status(409).send({message: 'Wrong input was provided!'}));
+    .catch(error =>
+      response.status(409).send({ message: "Wrong input was provided!" })
+    );
 });
 
 app.post("/api/logIn", (request, response) => {
-  // console.log('sdfs');
-  if(!request.body.email || !request.body.password)
-    return response.status(400).send({message: 'Email and password must be present in the request!'})
+  if (!request.body.email || !request.body.password)
+    return response
+      .status(400)
+      .send({ message: "Email and password must be present in the request!" });
   let { email } = request.body;
   User.findOne({ email })
     .then(user => {
@@ -87,14 +87,14 @@ app.post("/api/logIn", (request, response) => {
 
       return response.status(401).send({ message: "Wrong password provided!" });
     })
-    .catch((error) => response.status(404).send({ message: error }));
+    .catch(error => response.status(404).send({ message: error }));
 });
-// app.use(`${BASE_URL}${ACCOUNT_BASE_URL}`, routes);
-app.use(`${BASE_URL}`, modelRoutes);
 
+app.use(`${BASE_URL}`, modelRoutes);
 app.listen(2000, () => {
   console.log("Server running on port: " + 2000);
 });
+
 // app.put("/api/equities", authMiddleWare, (req, res) => {
 //   let { _id, name, initialBalance } = req.body;
 //   let userID = req.loggedInUser._id;

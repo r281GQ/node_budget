@@ -1,27 +1,35 @@
 const _ = require("lodash");
+
 const { Account } = require("./../../db/models");
+const { idValidator, extractUser } = require("./../../misc/utils");
+const {
+  ID_INVALID_OR_NOT_PRESENT,
+  FORBIDDEN_RESOURCE,
+  RESOURCE_NOT_FOUND,
+  SERVER_ERROR,
+  ACCOUNT_BALANCE,
+  DEPENDENCIES_NOT_MET,
+  BUDGET_INCOME_CONFLICT
+} = require("./../../misc/errors");
 
 const pickPropertiesForAccount = account =>
-  _.pick(account, ["_id", "name", "initialBalance", "user"]);
+  _.pick(account, ["_id", "name", "initialBalance"]);
 
 const handleGetAllAccounts = (request, response) => {
   let accountsToSend;
+  const user = extractUser(request);
 
-  let { loggedInUser } = request;
-  console.log(loggedInUser);
-  Account.find({ user: loggedInUser._id })
-
+  Account.find({ user })
     .sort({ name: 1 })
     .then(accounts => {
-        accountsToSend = accounts;
-        return Promise.all(
-          _.map(accounts, account => {
-            return account.currentBalance();
-          })
-        );
+      accountsToSend = accounts;
+      return Promise.all(
+        _.map(accounts, account => {
+          return account.currentBalance();
+        })
+      );
     })
     .then(currentBalances => {
-      console.log('HERE');
       let reduced = _.map(accountsToSend, account =>
         pickPropertiesForAccount(account)
       );
@@ -31,21 +39,23 @@ const handleGetAllAccounts = (request, response) => {
       response.status(200).send(_.merge(reduced, prefixedCurrentBalances));
     })
     .catch(error => {
-      response.status(500).send({ error });
+      response.status(500).send({ error: SERVER_ERROR });
     });
 };
 
 const handlePutAccount = (request, response) => {
   let { _id, name } = request.body;
 
-  let { loggedInUser } = request;
+  if (!idValidator(_id))
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
+
+  const user = extractUser(request);
 
   let accountToSend;
 
-  Account.findOne({ _id })
+  Account.findOne({ _id, user })
     .then(account => {
-      if (!account.user.equals(loggedInUser._id))
-        return response.sendStatus(403);
+      if (!account) return Promise.reject({ message: RESOURCE_NOT_FOUND });
 
       return Account.findOneAndUpdate(
         { _id },
@@ -65,14 +75,19 @@ const handlePutAccount = (request, response) => {
       );
     })
     .catch(error => {
-      response.status(500).send({ error });
+      switch (error.message) {
+        case RESOURCE_NOT_FOUND:
+          return response.status(404).send({ error: RESOURCE_NOT_FOUND });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
     });
 };
 
 const handlePostAccount = (request, response) => {
   let { name, initialBalance, currency } = request.body;
 
-  let { loggedInUser } = request;
+  const user = extractUser(request);
 
   let account = new Account({
     name,
@@ -80,7 +95,7 @@ const handlePostAccount = (request, response) => {
     currency
   });
 
-  account.user = loggedInUser._id;
+  account.user = user;
 
   let accountToSend;
 
@@ -96,17 +111,22 @@ const handlePostAccount = (request, response) => {
       response.status(201).send(reducedAccount);
     })
     .catch(error => {
-      response.status(500).send({ error });
+      response.status(500).send({ error: SERVER_ERROR });
     });
 };
 
 const handleGetAccount = (request, response) => {
   let accountToSend;
 
-  Account.findOne({ _id: request.params["id"] })
+  const user = extractUser(request);
+  const _id = request.params["id"];
+
+  if (!idValidator(_id))
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
+
+  Account.findOne({ _id, user })
     .then(account => {
-      if (!account.user.equals(request.loggedInUser._id))
-        response.sendStatus(403);
+      if (!account) return Promise.reject({ message: RESOURCE_NOT_FOUND });
 
       accountToSend = account;
       return account.currentBalance();
@@ -117,25 +137,39 @@ const handleGetAccount = (request, response) => {
 
       return response.status(200).send(reducedAccount);
     })
-    .catch(error => response.status(500).send({error: error.message}));
+    .catch(error => {
+      switch (error.message) {
+        case RESOURCE_NOT_FOUND:
+          return response.status(404).send({ error: RESOURCE_NOT_FOUND });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
+    });
 };
 
 const handleDeleteAccount = (request, response) => {
-  let { loggedInUser } = request;
-  console.log("inside stuff");
-  Account.findOne({ _id: request.params["id"] })
+  const user = extractUser(request);
+  const _id = request.params["id"];
+
+  if (!idValidator(_id))
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
+
+  Account.findOne({ _id, user })
     .then(account => {
-      console.log(account);
-      if (!account.user.equals(loggedInUser._id))
-        // console.log('aint');
-        response.sendStatus(403);
+      if (!account) return Promise.reject({ message: RESOURCE_NOT_FOUND });
       return account.remove();
     })
     .then(() => {
-      console.log("IS");
-      response.status(200).send();
+      return response.status(200).send({});
     })
-    .catch(error => response.sendStatus(500));
+    .catch(error => {
+      switch (error.message) {
+        case RESOURCE_NOT_FOUND:
+          return response.status(404).send({ error: RESOURCE_NOT_FOUND });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
+    });
 };
 
 module.exports = {

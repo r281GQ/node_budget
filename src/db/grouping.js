@@ -1,6 +1,7 @@
 const _ = require("lodash");
 
 const { mongoose } = require("./mongooseConfig");
+const { ACCOUNT_BALANCE } = require("./../misc/errors");
 
 const Schema = mongoose.Schema;
 
@@ -94,19 +95,14 @@ GroupingSchema.pre("remove", function(next) {
               : sum - transaction.amount,
           account.initialBalance
         );
-        if (sumWithoutGrouping < 0){
-          console.log('aint enought');
-          return next(
-            new Error("Balance would not be enought if grouping was removed!")
-          );
-        }else{
-          console.log('enough');
+        if (sumWithoutGrouping < 0) {
+          return next(new Error(ACCOUNT_BALANCE));
+        } else {
           return next();
         }
-
       });
-    });
-    // .then(() => next());
+    })
+    .catch(error => next(error));
 });
 
 GroupingSchema.pre("remove", function(next) {

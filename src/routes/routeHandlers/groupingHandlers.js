@@ -1,83 +1,123 @@
 const _ = require("lodash");
+
 const { Grouping } = require("./../../db/models");
+const { idValidator, extractUser } = require("./../../misc/utils");
+const {
+  ID_INVALID_OR_NOT_PRESENT,
+  FORBIDDEN_RESOURCE,
+  RESOURCE_NOT_FOUND,
+  SERVER_ERROR,
+  ACCOUNT_BALANCE,
+  DEPENDENCIES_NOT_MET,
+  BUDGET_INCOME_CONFLICT
+} = require("./../../misc/errors");
+
+const pickPropertiesForGrouping = grouping =>
+  _.pick(grouping, ["_id", "name", "type"]);
 
 const handlePostGrouping = (request, response) => {
   let { name, type } = request.body;
+
+  const user = extractUser(request);
 
   let grouping = new Grouping({
     name,
     type
   });
 
-  grouping.user = request.loggedInUser._id;
+  grouping.user = user;
 
   grouping
     .save()
     .then(grouping => {
-      response.status(201).send(_.pick(grouping, ["_id", "name", "type"]));
+      response.status(201).send(pickPropertiesForGrouping(grouping));
     })
-    .catch(error => response.status(409).send({ error }));
+    .catch(error => response.status(500).send({ error: SERVER_ERROR }));
 };
 
 const handleGetAllGrouping = (request, response) => {
-  let { loggedInUser } = request;
+  const user = extractUser(request);
 
-  Grouping.find({ user: loggedInUser._id })
+  Grouping.find({ user })
     .then(groupings => {
-      response.status(200).send(groupings);
+      response
+        .status(200)
+        .send(
+          _.map(groupings, grouping => pickPropertiesForGrouping(grouping))
+        );
     })
-    .catch(error => console.log(error));
+    .catch(error => response.status(500).send({ error: SERVER_ERROR }));
 };
 
 const handlePutGrouping = (request, response) => {
-  let { loggedInUser } = request;
-  let {name, _id} = request.body;
-    // let _id = request.params['id'];
+  const user = extractUser(request);
+  let { name, _id } = request.body;
 
-    Grouping.findOne({ _id })
-      .then( grouping => {
+  if (!idValidator(_id))
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
 
-        if(!grouping.user.equals(loggedInUser._id))
-          response.status(403).send({error: 'auth'});
+  Grouping.findOne({ _id, user })
+    .then(grouping => {
+      if (!grouping) return Promise.reject({ message: RESOURCE_NOT_FOUND });
 
-        return Grouping.findOneAndUpdate({ _id}, {$set: {name}}, {new: true});
-      })
-      .then(gr=> response.status(200).send(gr))
-      .catch(error => {
-        console.log(error);
-        response.status(409).send({ error});
-      });
-}
+      return Grouping.findOneAndUpdate(
+        { _id },
+        { $set: { name } },
+        { new: true }
+      );
+    })
+    .then(grouping =>
+      response.status(200).send(pickPropertiesForGrouping(grouping))
+    )
+    .catch(error => {
+      switch (error.message) {
+        case RESOURCE_NOT_FOUND:
+          return response.status(404).send({ error: RESOURCE_NOT_FOUND });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
+    });
+};
 
 const handleDeleteGrouping = (request, response) => {
-  let { loggedInUser } = request;
-    let _id = request.params['id'];
+  const user = extractUser(request);
+  let _id = request.params["id"];
 
-    Grouping.findOne({ _id })
-      .then( grouping => {
+  if (!idValidator(_id))
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
 
-        if(!grouping.user.equals(loggedInUser._id))
-          response.status(403).send({error: 'auth'});
-
-        return grouping.remove();
-      })
-      .then(gr=> response.status(200).send(gr))
-      .catch(error => {
-        response.status(409).send({error});
-      });
-}
+  Grouping.findOne({ _id, user })
+    .then(grouping => {
+      if (!grouping) return Promise.reject({ message: RESOURCE_NOT_FOUND });
+      return grouping.remove();
+    })
+    .then(() => response.status(200).send({}))
+    .catch(error => {
+      switch (error.message) {
+        case RESOURCE_NOT_FOUND:
+          return response.status(404).send({ error: RESOURCE_NOT_FOUND });
+        case ACCOUNT_BALANCE:
+          return response.status(400).send({ error: ACCOUNT_BALANCE });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
+    });
+};
 
 const handleGetGrouping = (request, response) => {
-  let accountsToSend;
+  const user = extractUser(request);
+  let _id = request.params["id"];
 
-    Grouping.findOne({ _id: request.params["id"] })
-      .then(gr => {
-        if (!gr.user.equals(request.loggedInUser._id)) return response.sendStatus(403);
+  if (!idValidator(_id))
+    return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
 
-        return response.status(200).send(gr);
-      })
-      .catch(error => response.sendStatus(500));
-}
+  Grouping.findOne({ _id, user })
+    .then(grouping => {
+      if (!grouping) response.status(404).send({ error: RESOURCE_NOT_FOUND });
+      return response.status(200).send(pickPropertiesForGrouping(grouping));
+    })
+    .catch(error => response.status(500).send({ error: SERVER_ERROR }));
+};
 
 module.exports = {
   handlePostGrouping,

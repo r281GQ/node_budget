@@ -1,15 +1,16 @@
 const jwt = require("jsonwebtoken");
 
-const secret = "secret";
+const secret = require('./../misc/secrets');
+const { ID_INVALID_OR_NOT_PRESENT } = require('./../misc/errors');
 
 const authMiddleWare = (request, response, next) => {
   let token = request.header("x-auth");
   jwt.verify(token, secret, (error, loggedInUser) => {
     if (error)
       return response
-        .status(403)
+        .status(401)
         .send({
-          message: "Authentication token is not present or is invalid!"
+          message: ID_INVALID_OR_NOT_PRESENT
         });
     request.loggedInUser = loggedInUser;
     next();

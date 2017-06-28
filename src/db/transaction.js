@@ -11,7 +11,7 @@ const {
   ACCOUNT_BALANCE,
   DEPENDENCIES_NOT_MET,
   BUDGET_INCOME_CONFLICT
-} = require("./../routes/routeHandlers/error_messages");
+} = require("./../misc/errors");
 
 const Schema = mongoose.Schema;
 

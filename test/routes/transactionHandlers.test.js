@@ -374,7 +374,7 @@ describe("Transaction handler", () => {
           .put(`/api/transaction`)
           .set("x-auth", token)
           .set("Accept", "application/json")
-          .expect(409)
+          .expect(400)
           .send({
             _id: tx2._id,
             name: "udapted",
@@ -484,7 +484,7 @@ describe("Transaction handler", () => {
 
     //__second trnsaction is income on __account, where another expense is created, which was only possible because of __second_transction
     //therefore we cannot decrease the amount, otherwise the expense wouldn't have enough balance
-    it("put should return  409 when changing would result in insufficient balance", done => {
+    it("put should return  400 when changing would result in insufficient balance", done => {
       request(app)
         .post(`/api/transaction`)
         .set("x-auth", token)
@@ -512,7 +512,7 @@ describe("Transaction handler", () => {
           );
         })
         .then(res => {
-          expect(res.status).toBe(409);
+          expect(res.status).toBe(400);
           done();
         })
         .catch(error => {
@@ -548,7 +548,7 @@ describe("Transaction handler", () => {
           );
         })
         .then(res => {
-          expect(res.status).toBe(409);
+          expect(res.status).toBe(400);
           done();
         })
         .catch(error => {
@@ -562,7 +562,7 @@ describe("Transaction handler", () => {
           .put(`/api/transaction`)
           .set("x-auth", token)
           .set("Accept", "application/json")
-          .expect(409)
+          .expect(400)
           .send({
             _id: __transaction._id,
             name: "udapted",

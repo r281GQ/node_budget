@@ -4,10 +4,8 @@ const environment = process.env.NODE_ENV;
 
 if(environment === 'test')
   mongoose.connect("mongodb://localhost:27017/test");
-else 
+else
   mongoose.connect("mongodb://localhost:27017/development");
-// else if(environment === "production")
-//   mongoose.connect("mongodb://localhost:27017/production");
 
 mongoose.Promise = global.Promise;
 
