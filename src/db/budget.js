@@ -63,7 +63,8 @@ BudgetSchema.methods.balances = function() {
   let budget = this;
   let bps = budget.budgetPeriods;
   return new Promise((resolve, reject) => {
-    Transaction.find({ budget: budget }).then(transactions => {
+    Transaction.find({ budget })
+    .then(transactions => {
       let array = _.map(bps, bp =>
         _.extend({}, _.pick(bp, ['_id',"allowance", "month"]), {
           monthlyBalance:
@@ -92,8 +93,11 @@ BudgetSchema.methods.balances = function() {
               )
         })
       );
-
-      resolve(_.reduce(_.sortBy(array, ["month"]), calculateSum, []));
+      let calculatedArray = _.reduce(_.sortBy(array, ["month"]), calculateSum, []);
+      resolve(_.keyBy(calculatedArray, '_id'));
+    })
+    .catch(error => {
+      reject(error);
     });
   });
 };
@@ -116,7 +120,6 @@ BudgetSchema.pre('save', function(next){
 
     return sum;
   }, [] );
-// console.log('done');
   this.budgetPeriods = arrayOfDate;
   next();
 });

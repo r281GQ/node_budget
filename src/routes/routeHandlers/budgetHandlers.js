@@ -1,14 +1,26 @@
 const _ = require("lodash");
+
 const { Transaction, Grouping, Account, Budget } = require("./../../db/models");
+const { idValidator, extractUser } = require("./../../misc/utils");
+const {
+  ID_INVALID_OR_NOT_PRESENT,
+  FORBIDDEN_RESOURCE,
+  RESOURCE_NOT_FOUND,
+  SERVER_ERROR,
+  ACCOUNT_BALANCE,
+  DEPENDENCIES_NOT_MET,
+  BUDGET_INCOME_CONFLICT
+} = require("./../../misc/errors");
 
+const pickPropertiesForBudget = budget =>
+  _.pick(budget, ["_id", "name", "currency", "defaultAllowance"]);
 
-
-
-const handlePostBudget = (request, response)=>{
+const handlePostBudget = (request, response) => {
   let { name, currency, defaultAllowance } = request.body;
 
   let userId = request.loggedInUser._id;
-   let intermediate;
+  let budgetToSend;
+
   let budget = new Budget({
     name,
     currency,
@@ -16,148 +28,96 @@ const handlePostBudget = (request, response)=>{
   });
   budget.user = userId;
 
-  budget.save()
-    .then(bugset => {
-      intermediate = bugset;
+  budget
+    .save()
+    .then(budget => {
+      budgetToSend = budget;
       return budget.balances();
     })
-    .then(balances=> {
-      let g = {};
-      _.forEach(balances, bps => {
-
-        g[bps._id] = bps;
-      });
-      let f = _.pick(intermediate, ['_id', 'name', 'currency', 'defaultAllowance']);
-      f.budgetPeriods = g;
-      response.status(201).send(f);
+    .then(balances => {
+      budgetToSend = pickPropertiesForBudget(budgetToSend);
+      budgetToSend.budgetPeriods = balances;
+      response.status(201).send(budgetToSend);
     })
     .catch(error => {
-      response.status(500).send({error: ''});
+      response.status(500).send({ error: "" });
     });
-
 };
-const handleGetAllBudgets = (request, response)=>{
-  let { loggedInUser } = request;
+const handleGetAllBudgets = (request, response) => {
+  const user = extractUser(request);
+  let intermediate;
 
-    let intermediate;
-
-    //merge needs an object to assicate with an onther array same object
-
-    Budget.find({ user: loggedInUser._id })
-      .then(budgets => {
-        intermediate = budgets;
-        return Promise.all(_.map(budgets, budget => budget.balances()));
-      })
-      .then(enhancedBPS => {
-        // console.log(enhancedBPS);
-        let enhancedBPS1 = _.map(enhancedBPS, budgetPeriods => {
-          return { budgetPeriods };
-        });
-        // console.log(enhancedBPS1);
-
-        let tosend = _.map(intermediate, budget => _.pick(budget, ['_id','name', 'currency', 'user', 'defaultAllowance']));
-        // console.log(tosend);
-        let fine = _.merge(tosend, enhancedBPS1);
-
-        _.forEach(fine, bp => {
-          let g = {};
-          _.forEach(bp.budgetPeriods, bps => {
-
-            g[bps._id] = bps;
-          });
-          bp.budgetPeriods = g;
-          // console.log(g);
-        });
-        // console.log(enhancedBPS);
-        // console.log(fine);
-        response.status(200).send(fine);
-      })
-      .catch((err) => response.status(500).send({}));
-
+  Budget.find({ user })
+    .then(budgets => {
+      intermediate = budgets;
+      return Promise.all(_.map(budgets, budget => budget.balances()));
+    })
+    .then(balances => {
+      let budgetsToSend = _.merge(
+        _.map(intermediate, budget => pickPropertiesForBudget(budget)),
+        _.map(balances, budgetPeriods => ({
+          budgetPeriods
+        }))
+      );
+      response.status(200).send(budgetsToSend);
+    })
+    .catch(error => response.status(500).send({ error: SERVER_ERROR }));
 };
-const handlePutBudget = (request, response)=>{
-  // console.log(request.body._id);
-    // if (request.loggedInUser._id !== budget.user.toString())
-    //   return response.sendStatus(403);
-let intermediate;
-    Budget.findOneAndUpdate({_id: request.body._id, user: request.loggedInUser._id, }, {$set: {name: request.body.name }  }, {new: true})
-      .then(budget => {
-        if(!budget)
-          response.status(404).send({});
-          intermediate = budget;
-          return budget.balances();
-      })
-      .then(balances => {
-        let g = {};
-        _.forEach(balances, bps => {
+const handlePutBudget = (request, response) => {
+  const user = extractUser(request);
 
-          g[bps._id] = bps;
-        });
-        let f = _.pick(intermediate, ['_id', 'name', 'currency', 'defaultAllowance']);
-        f.budgetPeriods = g;
-        console.log(f);
-        // response.status(201).send(f);
-        response.status(200).send(f);
-      })
-      .catch(error => {
-        console.log(error);
-      });
+  let { _id, name } = request.body;
+
+  let intermediate;
+  Budget.findOneAndUpdate({ _id, user }, { $set: { name } }, { new: true })
+    .then(budget => {
+      if (!budget) return Promise.reject({ message: RESOURCE_NOT_FOUND });
+      intermediate = budget;
+      return budget.balances();
+    })
+    .then(balances => {
+      intermediate = pickPropertiesForBudget(intermediate);
+      intermediate.budgetPeriods = balances;
+      response.status(200).send(intermediate);
+    })
+    .catch(error => {
+      console.log(error);
+    });
 };
 
-// const handlePutBudgetPeriod = (request, response)=>{
-//   // console.log(request.body._id);
-//     // if (request.loggedInUser._id !== budget.user.toString())
-//     //   return response.sendStatus(403);
-//
-//     Budget.findOneAndUpdate({_id: request.body._id, user: request.loggedInUser._id, }, {$set: {name: request.body.name }  }, {new: true})
-//       .then(budget => {
-//         if(!budget)
-//           response.status(404).send({})
-//         response.status(200).send(budget);
-//       })
-//       .catch(error => {
-//         console.log(error);
-//       });
-// };
-const handleDeleteBudget = (request, response)=>{
-    let _id = request.params['id'];
-    let loggedInUser = request.loggedInUser;
+const handleDeleteBudget = (request, response) => {
+  let _id = request.params["id"];
+  let loggedInUser = request.loggedInUser;
 
-    Budget.findOne({ _id })
-      .then(budget => {
-          if(!budget.user.equals(loggedInUser._id))
-            response.status(403).send();
-          return budget.remove();
-      })
-      .then(() => {
-        response.status(200).send();
-      })
-      .catch(error => {
-
-      });
+  Budget.findOne({ _id })
+    .then(budget => {
+      if (!budget.user.equals(loggedInUser._id)) response.status(403).send();
+      return budget.remove();
+    })
+    .then(() => {
+      response.status(200).send();
+    })
+    .catch(error => {});
 };
-const handleGetBudget = (request, response)=>{
+const handleGetBudget = (request, response) => {
   let tosen;
-    Budget.findOne({ _id: request.params["id"] })
-      .then(budget => {
-        if (request.loggedInUser._id !== budget.user.toString())
-          return response.sendStatus(403);
-          tosen = budget;
-          console.log(budget.budgetPeriods);
-        return budget.balances();
-      })
-      .then(balances => {
-        console.log('balance:',  balances);
+  Budget.findOne({ _id: request.params["id"] })
+    .then(budget => {
+      if (request.loggedInUser._id !== budget.user.toString())
+        return response.sendStatus(403);
+      tosen = budget;
+      console.log(budget.budgetPeriods);
+      return budget.balances();
+    })
+    .then(balances => {
+      console.log("balance:", balances);
 
-        // console.log(_.pick(budget, ["name", "budgetPeriods"]));
+      // console.log(_.pick(budget, ["name", "budgetPeriods"]));
 
-      return response
-        .status(200)
-        .send({});
-      })
-      .catch(() => response.sendStatus(404));
+      return response.status(200).send({});
+    })
+    .catch(() => response.sendStatus(404));
 };
-
 
 //   if (request.loggedInUser._id !== budget.user.toString())
 //     return response.sendStatus(403);
@@ -193,7 +153,6 @@ const handleGetBudget = (request, response)=>{
 //
 //     });
 // });
-
 
 module.exports = {
   handlePostBudget,

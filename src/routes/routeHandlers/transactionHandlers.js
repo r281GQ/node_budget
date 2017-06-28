@@ -16,12 +16,13 @@ const {
   DEPENDENCIES_NOT_MET,
   BUDGET_INCOME_CONFLICT
 } = require("./../../misc/errors");
-const { idValidator, extractUser } = require('./../../misc/utils');
+const { idValidator, extractUser } = require("./../../misc/utils");
 
 const handleGetAllTransactions = (request, response) => {
   let user = extractUser(request);
 
-  Transaction.find({ user }).sort({ date: 1 })
+  Transaction.find({ user })
+    .sort({ date: 1 })
     .then(transactions => {
       return response.status(200).send(transactions);
     })
@@ -240,8 +241,13 @@ const handlePostTransaction = (request, response) => {
   )
     return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
 
-  transaction
-    .save()
+  //TODO: needs to find a way to get rid of scattered grouping populate code and do it in one place
+  Grouping.findOne({ _id: transaction.grouping, user })
+    .then(grouping => {
+      if (!grouping) return Promise.reject({ message: DEPENDENCIES_NOT_MET });
+      transaction.grouping = grouping;
+      return transaction.save();
+    })
     .then(transaction => {
       const toSend = _.pick(transaction, [
         "_id",

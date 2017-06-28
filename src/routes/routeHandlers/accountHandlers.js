@@ -4,12 +4,8 @@ const { Account } = require("./../../db/models");
 const { idValidator, extractUser } = require("./../../misc/utils");
 const {
   ID_INVALID_OR_NOT_PRESENT,
-  FORBIDDEN_RESOURCE,
   RESOURCE_NOT_FOUND,
-  SERVER_ERROR,
-  ACCOUNT_BALANCE,
-  DEPENDENCIES_NOT_MET,
-  BUDGET_INCOME_CONFLICT
+  SERVER_ERROR
 } = require("./../../misc/errors");
 
 const pickPropertiesForAccount = account =>
