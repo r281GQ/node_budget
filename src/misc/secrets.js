@@ -1,4 +1,4 @@
-const environment = process.env.NODE_ENV;
+const environment = process.env;
 
 
 module.exports = environment.SECRET || 'secret';
