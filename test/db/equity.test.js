@@ -1,3 +1,7 @@
+const moment = require("moment");
+const _ = require("lodash");
+const { expect } = require("chai");
+
 const {
   Equity,
   Budget,
@@ -9,22 +13,29 @@ const {
 
 const mongoose = require("./../../src/db/mongooseConfig");
 
-const _ = require("lodash");
-const expect = require("expect");
-
-xdescribe("equity", () => {
+describe("equity", () => {
+  let __user,
+    __account,
+    __grouping,
+    __budget,
+    __income,
+    __salary,
+    __asset,
+    __liability;
 
   afterEach(done => {
     Transaction.remove({})
-    .then(() =>   Promise.all([
-        Account.remove({}),
-        Grouping.remove({}),
-        Equity.remove({}),
-        Budget.remove({}),
-        User.remove({})
-      ]))
-    .then(() => done())
-    .catch(error => done(error));
+      .then(() =>
+        Promise.all([
+          Account.remove({}),
+          Grouping.remove({}),
+          Equity.remove({}),
+          Budget.remove({}),
+          User.remove({})
+        ])
+      )
+      .then(() => done())
+      .catch(error => done(error));
   });
   beforeEach(done => {
     Transaction.remove({})
@@ -38,143 +49,142 @@ xdescribe("equity", () => {
         ])
       )
       .then(() => {
-        let sampleUser = new User({
+        let user = new User({
           name: "Endre",
           email: "endre@mail.com",
           password: "123456"
         });
-        return sampleUser.save();
+        return user.save();
       })
-      .then(() => done())
-      .catch(error => done(error));
-  });
-
-  it("should return 1050 on asset && expense", done => {
-    User.findOne({ name: "Endre" })
       .then(user => {
-        let account = new Account({
-          name: "main",
-          initialBalance: 100,
-          currency: "GBP"
-        });
-        account.user = user;
+        __user = user;
 
-        let grouping = new Grouping({
-          name: "rent",
-          type: "expense"
-        });
-
-        grouping.user = user;
-
-        let equity = new Equity({
-          name: "betting",
-          initialBalance: 1000,
-          type: "asset",
-          currency: "GBP"
-        });
-
-        equity.user = user;
-
-        let tx = new Transaction({
-          name: "test",
-          amount: 50,
-          currency: "GBP",
-          memo: "test porpuses"
-        });
-
-        tx.user = user;
-        tx.account = account;
-        tx.equity = equity;
-        tx.grouping = grouping;
-
-        return Promise.all([
-          account.save(),
-          grouping.save(),
-          equity.save(),
-          tx.save()
-        ]);
-      })
-      .then(() => {
-        return Equity.findOne({ name: "betting" });
-      })
-      .then(equity => {
-        return equity.currentBalance();
-      })
-      .then(balance => {
-        expect(balance).toBe(1050);
         done();
       })
       .catch(error => done(error));
   });
 
-  it("should return 950 on liability && expense", done => {
-    User.findOne({ name: "Endre" })
-      .then(user => {
-        let account = new Account({
-          name: "main",
-          initialBalance: 100,
-          currency: "GBP"
-        });
-        account.user = user;
+  beforeEach(done => {
+    let account = new Account({
+      name: "main",
+      initialBalance: 100
+    });
 
-        let grouping = new Grouping({
-          name: "rent",
-          type: "expense"
-        });
+    let budget = new Budget({
+      name: "spending money",
+      defaultAllowance: 100
+    });
 
-        grouping.user = user;
+    let grouping = new Grouping({
+      name: "expense",
+      type: "expense"
+    });
 
-        let equity = new Equity({
-          name: "debt",
-          initialBalance: 1000,
-          type: "liability",
-          currency: "GBP"
-        });
+    let asset = new Equity({
+      name: "betting",
+      initialBalance: 1000,
+      type: "asset",
+      currency: "GBP"
+    });
 
+    let liability = new Equity({
+      name: "debt",
+      initialBalance: 1000,
+      type: "liability",
+      currency: "GBP"
+    });
 
+    liability.user = __user;
 
-        equity.user = user;
+    asset.user = __user;
+    budget.user = __user;
+    account.user = __user;
+    grouping.user = __user;
 
+    Promise.all([
+      budget.save(),
+      account.save(),
+      grouping.save(),
+      asset.save(),
+      liability.save()
+    ])
+      .then(persistedItems => {
+        __budget = persistedItems[0];
+        __account = persistedItems[1];
+        __grouping = persistedItems[2];
+        __asset = persistedItems[3];
+        __liability = persistedItems[4];
 
-
-        return Promise.all([
-          User.findOne({}),
-          account.save(),
-          grouping.save(),
-          equity.save()
-          // tx.save()
-        ]);
-      })
-      .then(dependencies => {
-
-
-        let tx = new Transaction({
-          name: "test",
-          amount: 50,
-          currency: "GBP",
-          memo: "test porpuses"
-        });
-
-        tx.user = dependencies[0];
-        tx.account = dependencies[1];
-        tx.equity = dependencies[3];
-        tx.grouping = dependencies[2];
-
-
-
-
-        return tx.save();
-      })
-      .then(() => {
-        return Equity.findOne({ name: "debt" });
-      })
-      .then(equity => {
-        return equity.currentBalance();
-      })
-      .then(balance => {
-        expect(balance).toBe(950);
         done();
       })
-      .catch(error => done(error));
+      .catch(err => {
+        done(err);
+      });
+  });
+
+  describe("transaction is asset", () => {
+    beforeEach(done => {
+      let transaction = new Transaction({
+        name: "current rent",
+        amount: 50,
+        currency: "GBP",
+        date: moment("07-06-2017", "DD-MM-YYYY")
+      });
+
+      transaction.account = __account;
+      transaction.grouping = __grouping;
+      transaction.user = __user;
+      transaction.budget = __budget;
+      transaction.equity = __asset;
+      transaction
+        .save()
+        .then(() => {
+          done();
+        })
+        .catch(error => done(error));
+    });
+
+    it("should return 1050 on asset && expense", done => {
+      __asset
+        .currentBalance()
+        .then(balance => {
+          expect(balance).to.equal(1050);
+          done();
+        })
+        .catch(error => done(error));
+    });
+  });
+
+  describe("transaction is liability", () => {
+    beforeEach(done => {
+      let transaction = new Transaction({
+        name: "current rent",
+        amount: 50,
+        currency: "GBP",
+        date: moment("07-06-2017", "DD-MM-YYYY")
+      });
+
+      transaction.account = __account;
+      transaction.grouping = __grouping;
+      transaction.user = __user;
+      transaction.budget = __budget;
+      transaction.equity = __liability;
+      transaction
+        .save()
+        .then(() => {
+          done();
+        })
+        .catch(error => done(error));
+    });
+
+    it("should return 950 on liability && expense", done => {
+      __liability
+        .currentBalance()
+        .then(balance => {
+          expect(balance).to.equal(950);
+          done();
+        })
+        .catch(error => done(error));
+    });
   });
 });

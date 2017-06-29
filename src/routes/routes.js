@@ -9,8 +9,16 @@ const {
 } = require("./routeHandlers/accountHandlers");
 
 const {
+  handlePostEquity,
+  handleGetAllEquities,
+  handleDeleteEquity,
+  handleGetEquity,
+  handlePutEquity
+} = require('./routeHandlers/equityHandlers');
+
+const {
   handlePostGrouping,
-  handleGetAllGrouping,
+  handleGetAllGroupings,
   handlePutGrouping,
   handleDeleteGrouping,
   handleGetGrouping
@@ -38,6 +46,7 @@ const ACCOUNT_BASE_URL = "account";
 const GROUPING_BASE_URL = 'grouping';
 const TRANSACTION_BASE_URL = 'transaction';
 const BUDGET_BASE_URL = 'budget';
+const EQUITY_BASE_URL = 'equity';
 
 router.use(authMiddleWare);
 
@@ -48,7 +57,7 @@ router.delete(`/${ACCOUNT_BASE_URL}/:id`, handleDeleteAccount);
 router.get(`/${ACCOUNT_BASE_URL}/:id`, handleGetAccount);
 
 router.post(`/${GROUPING_BASE_URL}`, handlePostGrouping);
-router.get(`/${GROUPING_BASE_URL}`, handleGetAllGrouping);
+router.get(`/${GROUPING_BASE_URL}`, handleGetAllGroupings);
 router.put(`/${GROUPING_BASE_URL}`, handlePutGrouping);
 router.delete(`/${GROUPING_BASE_URL}/:id`, handleDeleteGrouping);
 router.get(`/${GROUPING_BASE_URL}/:id`, handleGetGrouping);
@@ -64,6 +73,12 @@ router.get(`/${BUDGET_BASE_URL}`, handleGetAllBudgets);
 router.put(`/${BUDGET_BASE_URL}`, handlePutBudget);
 router.delete(`/${BUDGET_BASE_URL}/:id`, handleDeleteBudget);
 router.get(`/${BUDGET_BASE_URL}/:id`, handleGetBudget);
+
+router.post(`/${EQUITY_BASE_URL}`, handlePostEquity);
+router.get(`/${EQUITY_BASE_URL}`, handleGetAllEquities);
+router.put(`/${EQUITY_BASE_URL}`, handlePutEquity);
+router.delete(`/${EQUITY_BASE_URL}/:id`, handleDeleteEquity);
+router.get(`/${EQUITY_BASE_URL}/:id`, handleGetEquity);
 
 module.exports = {
   modelRoutes: router

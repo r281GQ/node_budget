@@ -35,7 +35,7 @@ const handlePostGrouping = (request, response) => {
     .catch(error => response.status(500).send({ error: SERVER_ERROR }));
 };
 
-const handleGetAllGrouping = (request, response) => {
+const handleGetAllGroupings = (request, response) => {
   const user = extractUser(request);
 
   Grouping.find({ user })
@@ -121,7 +121,7 @@ const handleGetGrouping = (request, response) => {
 
 module.exports = {
   handlePostGrouping,
-  handleGetAllGrouping,
+  handleGetAllGroupings,
   handleDeleteGrouping,
   handleGetGrouping,
   handlePutGrouping
