@@ -12,8 +12,10 @@ const {
   Account
 } = require("./../../src/db/models");
 
+const { ACCOUNT_BALANCE } = require("./../../src/misc/errors");
+
 describe("Transaction", () => {
-  let __user, __account, __grouping, __budget;
+  let __user, __account, __grouping, __budget, __income, __salary;
 
   afterEach(done => {
     Transaction.remove({})
@@ -105,9 +107,7 @@ describe("Transaction", () => {
   });
 
   it("should persist transaction to DB", done => {
-
-         Account.findOne({ name: "main" })
-
+    Account.findOne({ name: "main" })
       .then(accountUpdated => {
         return accountUpdated.currentBalance();
       })
@@ -118,137 +118,80 @@ describe("Transaction", () => {
       .catch(error => done(error));
   });
 
-  it("should not be able to persist to DB because balance is too low", done => {
-    User.findOne({ name: "Endre" })
-      .then(user => {
-        let account = new Account({
-          name: "main",
-          initialBalance: 5
-        });
+  it("should not be able to persist to DB because balance would be too low on account", done => {
+    let transaction = new Transaction({
+      name: "current rent",
+      amount: 10,
+      currency: "GBP"
+    });
 
-        account.user = user;
-
-        let grouping = new Grouping({
-          name: "rent",
-          type: "expense"
-        });
-
-        grouping.user = user;
-
-        // let transaction = new Transaction({
-        //     name: 'current rent',
-        //     amount: 10,
-        //     currency: 'GBP'
-        // });
-        //
-        // transaction.account = account;
-        // transaction.grouping = grouping;
-        // transaction.user = user;
-
-        return Promise.all([account.save(), grouping.save(), User.findOne({})]);
-      })
-      .then(persistedItems => {
-        let account = persistedItems[0];
-        let grouping = persistedItems[1];
-        let user = persistedItems[2];
-
-        let transaction = new Transaction({
-          name: "current rent",
-          amount: 10,
-          currency: "GBP"
-        });
-
-        transaction.account = account;
-        transaction.grouping = grouping;
-        transaction.user = user;
-        return transaction.save();
-      })
-      .then(() => {})
+    transaction.account = __account;
+    transaction.grouping = __grouping;
+    transaction.user = __user;
+    transaction
+      .save()
+      .then(() => done(new Error()))
       .catch(error => new Promise((resolve, reject) => resolve(error)))
       .then(error => {
-        expect(error.message).to.equal(
-          "On creating modifying or deleting a transaction would result in insufficient balance on one of the accounts."
-        );
+        expect(error.message).to.equal(ACCOUNT_BALANCE);
         done();
       })
-      .catch(error => {done(error)});
+      .catch(error => done(error));
   });
 
-  it("should not be able to remove because balance is to low", done => {
-    User.findOne({ name: "Endre" })
-      .then(user => {
-        let account = new Account({
-          name: "main",
-          initialBalance: 15
-        });
+  it("should not be able to remove because balance would be to low on account", done => {
+    let income = new Grouping({
+      name: "salary",
+      type: "income"
+    });
 
-        account.user = __user;
+    income.user = __user;
 
-        let rent = new Grouping({
-          name: "rent",
-          type: "expense"
-        });
-
-        rent.user = __user;
-
-        let salary = new Grouping({
-          name: "salary",
-          type: "income"
-        });
-
-        salary.user = __user;
-
-        return Promise.all([account.save(), rent.save(), salary.save()]);
-      })
-      .then(dep => {
-        let transaction2 = new Transaction({
+    income
+      .save()
+      .then(income => {
+        __income = income;
+        let transaction = new Transaction({
           name: "weekly salary",
           amount: 20,
           currency: "GBP"
         });
-        transaction2.account = dep[0];
-        transaction2.grouping = dep[2];
-        transaction2.user = __user;
-        return transaction2.save();
+        transaction.account = __account;
+        transaction.grouping = __income;
+        transaction.user = __user;
+        return transaction.save();
       })
-      .then(dep => {
-        return Promise.all([
-          Account.findOne({ name: "main" }),
-          Grouping.findOne({ name: "rent" }),
-          User.findOne({})
-        ]);
-      })
-      .then(values => {
-        let transaction = new Transaction({
+      .then(transaction => {
+        __salary = transaction;
+        let expense = new Transaction({
           name: "current rent",
           amount: 30,
           currency: "GBP"
         });
-        transaction.account = values[0];
-        transaction.grouping = values[1];
-        transaction.user = __user;
+        expense.account = __account;
+        expense.grouping = __grouping;
+        expense.user = __user;
 
-        return transaction.save();
+        return expense.save();
       })
-      .then(() => Transaction.findOne({ name: "weekly salary" }))
-      .then(transaction => {
-        return transaction.remove();
-      })
+      .then(() => __salary.remove())
       .then(() => {
-        done();
+        done(new Error());
       })
-      .catch(error => {
-        return new Promise((resolve, reject) => {
-          resolve(error);
-        });
-      })
+      .catch(error => new Promise(resolve => resolve(error)))
       .then(error => {
-        expect(error.message).to.equal(
-          "On creating modifying or deleting a transaction would result in insufficient balance on one of the accounts."
-        );
+        expect(error.message).to.equal(ACCOUNT_BALANCE);
         done();
       })
-      .catch(error => {});
+      .catch(error => done(error));
   });
 
+  it("should create budgetPeriod despite it does not exist yet", done => {
+    Budget.findOne({})
+      .then(budget => {
+        expect(budget.budgetPeriods.length).not.to.equal(0);
+        done();
+      })
+      .catch(error => done(error));
+  });
 });

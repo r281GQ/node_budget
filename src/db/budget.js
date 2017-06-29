@@ -84,21 +84,33 @@ BudgetSchema.methods.assignBudgetPeriod = function(month) {
   return new Promise((resolve, reject) => {
     if (!month) reject();
 
+    if (_.isEmpty(this.budgetPeriods))
+      this.budgetPeriods.push({
+        month: this._id.getTimestamp(),
+        allowance: this.defaultAllowance
+      });
+
     let firstPeriod = _.first(_.sortBy(this.budgetPeriods, ["month"]));
+    let lastPeriod = _.last(_.sortBy(this.budgetPeriods, ["month"]));
 
     if (
       !_.find(this.budgetPeriods, bp =>
         moment(bp.month).isSame(moment(month), "M")
       )
     ) {
-      while (!moment(month).isSame(firstPeriod.month, "month")) {
-        this.budgetPeriods.push({ month, allowance: this.defaultAllowance });
-        month = moment(month).add(1, "M");
+      if (moment(month).isBefore(firstPeriod.month, "month")) {
+        while (!moment(month).isSame(firstPeriod.month, "month")) {
+          this.budgetPeriods.push({ month, allowance: this.defaultAllowance });
+          month = moment(month).add(1, "M");
+        }
+      } else {
+        while (!moment(month).isSame(lastPeriod.month, "month")) {
+          this.budgetPeriods.push({ month, allowance: this.defaultAllowance });
+          month = moment(month).subtract(1, "M");
+        }
       }
-      this.save().then(budget => resolve(budget)).catch(error => reject(error));
-    } else {
-      resolve(this);
     }
+    this.save().then(budget => resolve(budget)).catch(error => reject(error));
   });
 };
 
@@ -114,13 +126,11 @@ BudgetSchema.methods.balances = function() {
             monthlyBalance:
               _.reduce(
                 _.map(
-                  _.filter(
-                    budget.budgetPeriods,
-                    bpToFilter =>
-                      moment(bpToFilter.month).isSame(
-                        moment(bp.month, "DD-MM-YYYY"),
-                        "month"
-                      )
+                  _.filter(budget.budgetPeriods, bpToFilter =>
+                    moment(bpToFilter.month).isSame(
+                      moment(bp.month, "DD-MM-YYYY"),
+                      "month"
+                    )
                   ),
                   bpToMap => bpToMap.allowance
                 ),
@@ -128,13 +138,11 @@ BudgetSchema.methods.balances = function() {
                 0
               ) -
                 _.reduce(
-                  _.filter(
-                    transactions,
-                    transaction =>
-                      moment(transaction.date).isSame(
-                        moment(bp.month, "DD-MM-YYYY"),
-                        "month"
-                      )
+                  _.filter(transactions, transaction =>
+                    moment(transaction.date).isSame(
+                      moment(bp.month, "DD-MM-YYYY"),
+                      "month"
+                    )
                   ),
                   (sum, transaction) => sum + transaction.amount,
                   0

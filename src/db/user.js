@@ -2,6 +2,7 @@ const { mongoose } = require('./mongooseConfig');
 
 const Schema = mongoose.Schema;
 
+//TODO: add token validation by collection valid ids in mongoose and clearing them on logouts and constantly checkin them through the api endpoints
 let UserSchema = new Schema({
     name: {
         type: String,

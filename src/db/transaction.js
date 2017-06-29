@@ -120,46 +120,19 @@ TransactionSchema.pre("save", function(next) {
     });
 });
 
-//TODO: need different api endpoint for confirmation if tx is before budget creation data, in case user wants to avoid increase in comulative balance
-// TransactionSchema.pre("save", function(next) {
-//   let transaction = this;
-//   let Budget = mongoose.model("Budget");
-//
-//   if (!transaction.budget) return next();
-//
-//   Budget.findOne({ _id: transaction.budget })
-//     .then(budget => {
-//       let has = false;
-//       _.forEach(budget.budgetPeriods, bp => {
-//         if (
-//           moment(transaction.date).format("MM-YYYY") ===
-//           moment(bp.month).format("MM-YYYY")
-//         )
-//           has = true;
-//       });
-//
-//       if (has) return next();
-//
-//       let init = transaction.date;
-//       let newBP = {
-//         month: init,
-//         allowance: budget.defaultAllowance
-//       };
-//
-//       return Budget.findOneAndUpdate(
-//         { _id: budget._id },
-//         { $push: { budgetPeriods: newBP } }
-//       );
-//     })
-//     .then(budget => {
-//       console.log("success");
-//       return next();
-//     })
-//     .catch(error => {
-//       console.log("cenk");
-//       next(error);
-//     });
-// });
+TransactionSchema.pre("save", function(next) {
+  let transaction = this;
+  let Budget = mongoose.model("Budget");
+
+  if (!transaction.budget) return next();
+
+  Budget.findOne({ _id: transaction.budget })
+    .then(budget => {
+      return budget.assignBudgetPeriod(transaction.date);
+    })
+    .then(() => next())
+    .catch(error => next(error));
+});
 
 TransactionSchema.pre("remove", function(next) {
   let transaction = this;
