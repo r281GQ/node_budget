@@ -101,48 +101,4 @@ app.listen(2000, () => {
   console.log("Server running on port: " + 2000);
 });
 
-// app.delete('/api/user/:id', authMiddleWare, (request, response)=>{
-//
-// let loggedInUser = request.loggedInUser;
-//
-//   User.findOne({ _id: request.params['id'] })
-//     .then(user => {
-//       console.log(user);
-//       if(!user._id.equals(loggedInUser._id))
-//         response.sendStatus(403);
-//
-//       return user.remove( );
-//
-//     })
-//     .then(() => response.status(200).send())
-//     .catch(error => {
-//       console.log(error);
-//       response.status(500).send({error});
-//     });
-//
-//
-// });
-//
-// app.put('/api/user', authMiddleWare, (request, response)=>{
-//
-//   let { _id, name } = request.body;
-//
-//   let loggedInUser = request.loggedInUser;
-//
-//   User.findOne({ _id })
-//     .then(user => {
-//       if(!user._id.equals(loggedInUser._id))
-//         response.sendStatus(403);
-//
-//       return User.findOneAndUpdate({_id}, {$set: {name}}, {new: true})
-//
-//     })
-//     .then(userke => response.status(200).send(userke))
-//     .catch(error => {
-//       console.log(error);
-//       response.status(500).send({error});
-//     });
-//
-// });
-
 module.exports = { app };
