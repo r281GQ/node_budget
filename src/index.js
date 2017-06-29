@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
 const _ = require("lodash");
 const cors = require("cors");
+const hash = require('password-hash');
 
 const { mongoose } = require("./db/mongooseConfig");
 const { modelRoutes } = require("./../src/routes/routes");
@@ -48,10 +49,12 @@ app.get("/api/whoAmI", (request, response) => {
 app.post("/api/signUp", (request, response) => {
   let { name, email, password } = request.body;
 
+  const cryptedPassword = hash.generate(password, {algorithm:'sha256',saltLength: 8,iterations: 4});
+
   let user = new User({
     name,
     email,
-    password
+    password: cryptedPassword
   });
 
   user
@@ -78,7 +81,7 @@ app.post("/api/logIn", (request, response) => {
   let { email, password } = request.body;
   User.findOne({ email })
     .then(user => {
-      if (password === user.password) {
+      if (hash.verify(password, user.password)) {
         let userToSend = _.pick(user, ["_id", "name", "email"]);
         let token = jwt.sign(userToSend, secret);
         return response.set("x-auth", token).status(200).send(userToSend);

@@ -117,12 +117,10 @@ BudgetSchema.methods.balances = function() {
                   _.filter(
                     budget.budgetPeriods,
                     bpToFilter =>
-                      // moment(bpToFilter.month).isSame(
-                      //   moment(bp.month, "DD-MM-YYYY"),
-                      //   "month"
-                      // )
-                      moment(bpToFilter.month).format("MM-YYYY") ===
-                      moment(bp.month).format("MM-YYYY")
+                      moment(bpToFilter.month).isSame(
+                        moment(bp.month, "DD-MM-YYYY"),
+                        "month"
+                      )
                   ),
                   bpToMap => bpToMap.allowance
                 ),
@@ -133,12 +131,10 @@ BudgetSchema.methods.balances = function() {
                   _.filter(
                     transactions,
                     transaction =>
-                      // moment(transaction.date).isSame(
-                      //   moment(bp.month, "DD-MM-YYYY"),
-                      //   "month"
-                      // )
-                      moment(transaction.date).format("MM-YYYY") ===
-                      moment(bp.month).format("MM-YYYY")
+                      moment(transaction.date).isSame(
+                        moment(bp.month, "DD-MM-YYYY"),
+                        "month"
+                      )
                   ),
                   (sum, transaction) => sum + transaction.amount,
                   0
@@ -157,31 +153,6 @@ BudgetSchema.methods.balances = function() {
       });
   });
 };
-
-// BudgetSchema.pre("save", function(next) {
-//   let budget = this;
-//   let currentDate = moment();
-//   let monthsNumbers = [1, 2, 3, 4, 5, 6];
-//   let arrayOfDate = _.reduce(
-//     monthsNumbers,
-//     (sum, monthNumber) => {
-//       let last = _.last(sum);
-//       if (!last) {
-//         let init = moment();
-//         sum.push({ month: init, allowance: this.defaultAllowance });
-//       } else {
-//         let cloned = _.cloneDeep(last.month);
-//         let nextMonth = moment(cloned).add(1, "M");
-//         sum.push({ month: nextMonth, allowance: this.defaultAllowance });
-//       }
-//
-//       return sum;
-//     },
-//     []
-//   );
-//   this.budgetPeriods = arrayOfDate;
-//   next();
-// });
 
 BudgetSchema.pre("remove", function(next) {
   let Transaction = mongoose.model("Transaction");

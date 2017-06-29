@@ -12,7 +12,7 @@ const {
   Account
 } = require("./../../src/db/models");
 
-xdescribe("Transaction", () => {
+describe("Transaction", () => {
   let __user, __account, __grouping, __budget;
 
   afterEach(done => {
@@ -30,12 +30,16 @@ xdescribe("Transaction", () => {
       .catch(error => done(error));
   });
   beforeEach(done => {
-    Promise.all([
-      Account.remove({}),
-      Transaction.remove({}),
-      Grouping.remove({}),
-      User.remove({})
-    ])
+    Transaction.remove({})
+      .then(() =>
+        Promise.all([
+          Account.remove({}),
+          User.remove({}),
+          Budget.remove({}),
+          Grouping.remove({}),
+          Equity.remove({})
+        ])
+      )
       .then(() => {
         let user = new User({
           name: "Endre",
@@ -52,48 +56,63 @@ xdescribe("Transaction", () => {
       .catch(error => done(error));
   });
 
-  it("should persist transaction to DB", done => {
-    User.findOne({ name: "Endre" })
-      .then(user => {
-        let account = new Account({
-          name: "main",
-          initialBalance: 5
-        });
+  beforeEach(done => {
+    let account = new Account({
+      name: "main",
+      initialBalance: 15
+    });
 
-        account.user = __user;
+    let budget = new Budget({
+      name: "spending money",
+      defaultAllowance: 100
+    });
 
-        let grouping = new Grouping({
-          name: "salary",
-          type: "income"
-        });
+    let grouping = new Grouping({
+      name: "salary",
+      type: "expense"
+    });
 
-        grouping.user = __user;
+    budget.user = __user._id;
+    account.user = __user._id;
+    grouping.user = __user;
 
-        return Promise.all([account.save(), grouping.save()]);
-      })
-      .then(dep => {
-        __account = dep[0];
-        __grouping = dep[1];
+    Promise.all([budget.save(), account.save(), grouping.save()])
+      .then(persistedItems => {
+        __budget = persistedItems[0];
+        __account = persistedItems[1];
+        __grouping = persistedItems[2];
 
         let transaction = new Transaction({
           name: "current rent",
           amount: 10,
-          currency: "GBP"
+          currency: "GBP",
+          date: moment("07-06-2017", "DD-MM-YYYY")
         });
 
         transaction.account = __account;
         transaction.grouping = __grouping;
         transaction.user = __user;
+        transaction.budget = __budget;
         return transaction.save();
       })
-      .then(() => {
-        return Account.findOne({ name: "main" });
+      .then(transaction => {
+        __transaction = transaction;
+        done();
       })
+      .catch(err => {
+        done(err);
+      });
+  });
+
+  it("should persist transaction to DB", done => {
+
+         Account.findOne({ name: "main" })
+
       .then(accountUpdated => {
         return accountUpdated.currentBalance();
       })
       .then(mainBalance => {
-        expect(mainBalance).toBe(15);
+        expect(mainBalance).to.equal(5);
         done();
       })
       .catch(error => done(error));
@@ -147,12 +166,12 @@ xdescribe("Transaction", () => {
       .then(() => {})
       .catch(error => new Promise((resolve, reject) => resolve(error)))
       .then(error => {
-        expect(error.message).toBe(
+        expect(error.message).to.equal(
           "On creating modifying or deleting a transaction would result in insufficient balance on one of the accounts."
         );
         done();
       })
-      .catch(error => {});
+      .catch(error => {done(error)});
   });
 
   it("should not be able to remove because balance is to low", done => {
@@ -224,7 +243,7 @@ xdescribe("Transaction", () => {
         });
       })
       .then(error => {
-        expect(error.message).toBe(
+        expect(error.message).to.equal(
           "On creating modifying or deleting a transaction would result in insufficient balance on one of the accounts."
         );
         done();
@@ -232,18 +251,4 @@ xdescribe("Transaction", () => {
       .catch(error => {});
   });
 
-  afterEach(done => {
-    Transaction.remove({})
-      .then(() =>
-        Promise.all([
-          Account.remove({}),
-          Grouping.remove({}),
-          Equity.remove({}),
-          Budget.remove({}),
-          User.remove({})
-        ])
-      )
-      .then(() => done())
-      .catch(error => done(error));
-  });
 });

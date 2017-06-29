@@ -1,5 +1,8 @@
 const expect = require("expect");
 const request = require("supertest");
+const hash = require('password-hash');
+
+const password = hash.generate('123456', {algorithm:'sha256',saltLength: 8,iterations: 4});
 
 const { app } = require("./../../src/index");
 const {
@@ -34,7 +37,7 @@ describe("Transaction handler", () => {
     let user = new User({
       name: "Endre",
       email: "endre@mail.com",
-      password: "123456"
+      password
     });
     user
       .save()
