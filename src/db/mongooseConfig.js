@@ -6,7 +6,7 @@ if (environment === "TEST") mongoose.connect("mongodb://localhost:27017/test");
 else if (environment === "DEVELOPMENT")
   mongoose.connect("mongodb://localhost:27017/development");
 else if (environment === "PRODUCTION")
-  mongoose.connect("mongodb://localhost:27017/production");
+  mongoose.connect(environment.MONGODB_URI);
 
 mongoose.Promise = global.Promise;
 
