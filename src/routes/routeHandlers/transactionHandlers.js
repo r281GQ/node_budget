@@ -241,13 +241,8 @@ const handlePostTransaction = (request, response) => {
   )
     return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
 
-  //TODO: needs to find a way to get rid of scattered grouping populate code and do it in one place
-  Grouping.findOne({ _id: transaction.grouping, user })
-    .then(grouping => {
-      if (!grouping) return Promise.reject({ message: DEPENDENCIES_NOT_MET });
-      transaction.grouping = grouping;
-      return transaction.save();
-    })
+  transaction
+    .save()
     .then(transaction => {
       const toSend = _.pick(transaction, [
         "_id",
@@ -286,7 +281,6 @@ const handleDeleteTransaction = (request, response) => {
     return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
 
   Transaction.findOne({ _id, user })
-    .populate("grouping")
     .then(transaction => {
       if (!transaction) return Promise.reject({ message: RESOURCE_NOT_FOUND });
       if (!transaction.user.equals(request.loggedInUser._id))
@@ -309,17 +303,16 @@ const handleDeleteTransaction = (request, response) => {
 };
 
 const handleGetTransaction = (request, response) => {
+  let user = extractUser(request);
   const _id = request.params["id"];
 
   if (!idValidator(_id))
     return response.status(409).send({ error: ID_INVALID_OR_NOT_PRESENT });
 
-  Transaction.findOne({ _id })
+  Transaction.findOne({ _id, user })
     .then(transaction => {
       if (!transaction)
         return response.status(404).send({ error: RESOURCE_NOT_FOUND });
-      if (!transaction.user.equals(request.loggedInUser._id))
-        return response.status(403).send({ error: FORBIDDEN_RESOURCE });
 
       response
         .status(200)

@@ -164,8 +164,13 @@ TransactionSchema.pre("save", function(next) {
 TransactionSchema.pre("remove", function(next) {
   let transaction = this;
   let Account = mongoose.model("Account");
+  let Grouping = mongoose.model("Grouping");
 
-  Account.findOne({ _id: transaction.account })
+  Grouping.findOne({ _id: transaction.grouping })
+    .then(grouping => {
+      transaction.grouping = grouping;
+      return Account.findOne({ _id: transaction.account });
+    })
     .then(account => {
       if (transaction.grouping.type === "expense") return next();
       return account.currentBalance();

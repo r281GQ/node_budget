@@ -28,7 +28,7 @@ const getToken = (app, callBack) => {
     });
 };
 
-describe("endpoints", () => {
+describe("Grouping handler", () => {
   afterEach(done => {
     Transaction.remove({})
       .then(() =>

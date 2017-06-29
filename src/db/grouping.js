@@ -24,48 +24,6 @@ let GroupingSchema = new Schema({
   }
 });
 
-// GroupingSchema.pre("remove", function(next) {
-//   let Transaction = mongoose.model("Transaction");
-//   let Account = mongoose.model("Account");
-//
-//   let grouping = this;
-//
-//   let accountPromise = Account.find({ user: this.user });
-//   let transactionPromise = Transaction.find({
-//     user: this.user,
-//     grouping: { $ne: grouping }
-//   }).populate("grouping account");
-
-//   Promise.all([accountPromise, transactionPromise])
-//     .then(collections => {
-//       let accounts = collections[0];
-//       let transactions = collections[1];
-//       _.forEach(accounts, account => {
-//         let transactionForAccounts = _.filter(transactions, transaction =>
-//           transaction.account._id.equals(account._id)
-//         );
-//
-//         let sumWithoutGrouping = _.reduce(
-//           transactionForAccounts,
-//           (sum, transaction) =>
-//             transaction.grouping.type === "income"
-//               ? sum + transaction.amount
-//               : sum - transaction.amount,
-//           account.initialBalance
-//         );
-//         if (sumWithoutGrouping < 0){
-//           console.log('aint enought');
-//           return next(
-//             new Error("Balance would not be enought if grouping was removed!")
-//           );
-//         }
-//       });
-//       console.log('enough');
-//       return Transaction.remove({ grouping: grouping });
-//     })
-//     .then(() => next());
-// });
-
 GroupingSchema.pre("remove", function(next) {
   let Transaction = mongoose.model("Transaction");
   let Account = mongoose.model("Account");

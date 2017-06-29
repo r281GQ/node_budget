@@ -75,11 +75,10 @@ app.post("/api/logIn", (request, response) => {
     return response
       .status(400)
       .send({ message: "Email and password must be present in the request!" });
-  let { email } = request.body;
+  let { email, password } = request.body;
   User.findOne({ email })
     .then(user => {
-      let { password } = user;
-      if (password === request.body.password) {
+      if (password === user.password) {
         let userToSend = _.pick(user, ["_id", "name", "email"]);
         let token = jwt.sign(userToSend, secret);
         return response.set("x-auth", token).status(200).send(userToSend);

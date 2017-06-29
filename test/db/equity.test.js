@@ -27,13 +27,16 @@ xdescribe("equity", () => {
     .catch(error => done(error));
   });
   beforeEach(done => {
-    Promise.all([
-      Account.remove({}),
-      User.remove({}),
-      Grouping.remove({}),
-      Transaction.remove({}),
-      Equity.remove({})
-    ])
+    Transaction.remove({})
+      .then(() =>
+        Promise.all([
+          Account.remove({}),
+          User.remove({}),
+          Budget.remove({}),
+          Grouping.remove({}),
+          Equity.remove({})
+        ])
+      )
       .then(() => {
         let sampleUser = new User({
           name: "Endre",

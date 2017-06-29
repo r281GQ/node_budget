@@ -1,12 +1,30 @@
 const { mongoose } = require("./../../src/db/mongooseConfig");
-const { User, Transaction, Account, Equity, Budget, Grouping } = require("./../../src/db/models");
+const {
+  User,
+  Transaction,
+  Account,
+  Equity,
+  Budget,
+  Grouping
+} = require("./../../src/db/models");
 
-const expect = require("expect");
+const { expect } = require("chai");
 const _ = require("lodash");
 
 describe("User", () => {
   beforeEach(done => {
-    User.remove({}).then(() => done()).catch(error => console.log(error));
+    Transaction.remove({})
+      .then(() =>
+        Promise.all([
+          Account.remove({}),
+          Grouping.remove({}),
+          Equity.remove({}),
+          Budget.remove({}),
+          User.remove({})
+        ])
+      )
+      .then(() => done())
+      .catch(error => done(error));
   });
 
   afterEach(done => {
@@ -34,11 +52,8 @@ describe("User", () => {
     user
       .save()
       .then(user => {
-        console.log(user);
-        User.find({}).then(users => {
-          expect(users.length).toBe(1);
-          done();
-        });
+        expect(user.name).to.equal("Endre");
+        done();
       })
       .catch(error => {
         done(error);
@@ -53,11 +68,8 @@ describe("User", () => {
     });
     user
       .save()
-      .then(() => {
-        return User.findOne({ name: "Endre" });
-      })
       .then(user => {
-        expect(user.email).toBe("mail");
+        expect(user.email).to.equal("mail");
         done();
       })
       .catch(error => {
@@ -65,20 +77,19 @@ describe("User", () => {
       });
   });
 
-  it("should delete existing document", () => {
+  it("should delete existing document", done => {
     let user = new User({
       name: "Endre",
       email: "mail",
       password: "123456"
     });
+
     user
       .save()
-      .then(() => {
-        return User.remove({ name: "Endre" });
-      })
+      .then(() => User.remove({ name: "Endre" }))
       .then(() => User.find({}))
       .then(users => {
-        expect(users.length).toBe(0);
+        expect(users.length).to.equal(0);
         done();
       })
       .catch(error => {

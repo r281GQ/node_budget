@@ -70,6 +70,16 @@ EquitySchema.methods.currentBalance = function() {
   });
 };
 
+EquitySchema.pre("remove", function(next) {
+  let equity = this;
+
+  let Transaction = mongoose.model("Transaction");
+
+  Transaction.update({ equity }, { $unset: { equity: 1 } })
+    .then(() => next())
+    .catch(error => next(error));
+});
+
 const Equity = mongoose.model("Equity", EquitySchema);
 
 module.exports = { Equity };

@@ -1,136 +1,150 @@
-process.env.NODE_ENV = 'test';
-const { mongoose } = require('./../../src/db/mongooseConfig');
-const { Account } = require('./../../src/db/account');
-const { User } = require('./../../src/db/user');
-const { Transaction } = require('./../../src/db/transaction');
-const { Grouping, Budget, Equity } = require('./../../src/db/models');
+const { expect } = require("chai");
+const _ = require("lodash");
 
-const expect = require('expect');
-const _ = require('lodash');
+const { mongoose } = require("./../../src/db/mongooseConfig");
+const {
+  Grouping,
+  Budget,
+  Equity,
+  Transaction,
+  User,
+  Account
+} = require("./../../src/db/models");
 
+let __user, __account, __grouping;
 
-describe('Account', () => {
-
+describe("Account", () => {
   afterEach(done => {
     Transaction.remove({})
-    .then(() =>   Promise.all([
-        Account.remove({}),
-        Grouping.remove({}),
-        Equity.remove({}),
-        Budget.remove({}),
-        User.remove({})
-      ]))
-    .then(() => done())
-    .catch(error => done(error));
+      .then(() =>
+        Promise.all([
+          Account.remove({}),
+          Grouping.remove({}),
+          Equity.remove({}),
+          Budget.remove({}),
+          User.remove({})
+        ])
+      )
+      .then(() => done())
+      .catch(error => done(error));
   });
+
+  beforeEach(done => {
+    Transaction.remove({})
+      .then(() =>
+        Promise.all([
+          Account.remove({}),
+          User.remove({}),
+          Budget.remove({}),
+          Grouping.remove({}),
+          Equity.remove({})
+        ])
+      )
+      .then(() => {
+        let user = new User({
+          name: "Endre",
+          email: "endre@mail.com",
+          password: "123456"
+        });
+        return user.save();
+      })
+      .then(user => {
+        __user = user;
+        done();
+      })
+      .catch(error => done(error));
+  });
+
+  beforeEach(done => {
+    let account = new Account({
+      name: "main",
+      initialBalance: 100,
+      currency: "GBP"
+    });
+
+    account.user = __user;
+
+    account
+      .save()
+      .then(account => {
+        __account = account;
+        done();
+      })
+      .catch(error => done(error));
+  });
+
+  it("should retreive account from DB", done => {
+    Account.find({})
+      .then(accounts => {
+        expect(accounts.length).to.equal(1);
+        done();
+      })
+      .catch(error => done(error));
+  });
+
+  describe("with dependencies", () => {
+    let __transaction1, __transaction2;
+
     beforeEach(done => {
-        Promise.all([Account.remove({}), User.remove({}), Transaction.remove({})])
-            .then(() => {
-                let user = new User({
-                    name: 'Endre',
-                    email: 'endre@mail.com',
-                    password: '123456'
-                });
-                return user.save();
-            })
-            .then(() => {
-                done();
-            })
-            .catch(error => done(error));
+      let grouping = new Grouping({
+        name: "flat",
+        type: "expense"
+      });
+
+      grouping.user = __user;
+
+      grouping
+        .save()
+        .then(grouping => {
+
+          __grouping = grouping;
+
+          let transaction1 = new Transaction({
+            name: "rent",
+            amount: 10
+          });
+
+          let transaction2 = new Transaction({
+            name: "bills",
+            amount: 15
+          });
+
+          transaction1.user = __user;
+          transaction1.account = __account;
+          transaction1.grouping = __grouping;
+
+          transaction2.user = __user;
+          transaction2.account = __account;
+          transaction2.grouping = __grouping;
+          return Promise.all([transaction1.save(), transaction2.save()]);
+        })
+        .then(transactions => {
+          __transaction1 = transactions[0];
+          __transaction2 = transactions[1];
+          done();
+        })
+        .catch(error => done(error));
     });
 
-    it('should persist account to DB', done => {
-
-        User.findOne({})
-            .then(user => {
-                let account = new Account({
-                    name: 'main',
-                    initialBalance: 100,
-                    currency: 'GBP'
-                });
-
-                account.user = user;
-
-                return account.save();
-            })
-            .then(account => {
-                return Account.find({});
-            })
-            .then(accounts => {
-                expect(accounts.length).toBe(1);
-                done();
-            })
-            .catch(error => done(error));
+    it("should remove account and all transactions belong to account", done => {
+      Account.findOne({ name: "main" })
+        .then(account => account.remove())
+        .then(() => Transaction.find({}))
+        .then(transactions => {
+          expect(transactions.length).to.equal(0);
+          done();
+        })
+        .catch(error => done(error));
     });
 
-    // it('should change only the name on update operation', done => {
-    //     sampleAccount = new Account({
-    //         name: 'main',
-    //         balance: 100,
-    //         user: userId,
-    //         currency: 'GBP'
-    //     });
-
-    //     sampleAccount.save()
-    //         .then(account => {
-    //             return Account.findOneAndUpdate({ _id: account._id }, { $set: { name: 'side' } }, { new: true });
-    //         })
-    //         .then(account => {
-    //             expect(account.name).toBe('side');
-    //             done();
-    //         })
-    //         .catch(error => done(error));
-    // });
-
-    it('should remove account and all transactions belongs to account', done => {
-
-
-        User.findOne({})
-            .then(user => {
-                let sampleAccount = new Account({
-                    name: 'main',
-                    initialBalance: 100,
-                    currency: 'GBP'
-                });
-
-                let sampleGrouping = new Grouping({
-                    name: 'flat',
-                    type: 'expense'
-                });
-
-                sampleAccount.user = user;
-                sampleGrouping.user = user;
-
-                let transaction1 = new Transaction({
-                    name: 'rent',
-                    amount: 10,
-                });
-
-                let transaction2 = new Transaction({
-                    name: 'bills',
-                    amount: 15,
-                });
-
-                transaction1.user = user;
-                transaction1.account = sampleAccount;
-                transaction1.grouping = sampleGrouping;
-
-                transaction2.user = user;
-                transaction2.account = sampleAccount;
-                transaction2.grouping = sampleGrouping;
-
-
-                return Promise.all([sampleAccount.save(), sampleGrouping.save(), transaction1.save(), transaction2.save()]);
-            })
-            .then(()=> Account.findOne({name: 'main'}))
-            .then(accoun => accoun.remove())
-            .then(() => Transaction.find({}))
-            .then(transactions => {
-                expect(transactions.length).toBe(0);
-                done();
-            })
-            .catch(error => done(error));
-
-
+    it("should retreive the current balance 75", done => {
+      Account.findOne({ _id: __account._id })
+        .then(account => account.currentBalance())
+        .then(balance => {
+          expect(balance).to.equal(75);
+          done();
+        })
+        .catch(error => done(error));
     });
+  });
 });

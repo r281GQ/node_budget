@@ -66,7 +66,7 @@ const handleGetAllBudgets = (request, response) => {
 const handlePutBudget = (request, response) => {
   const user = extractUser(request);
 
-  let { _id, name } = request.body;
+  const { _id, name } = request.body;
 
   let intermediate;
   Budget.findOneAndUpdate({ _id, user }, { $set: { name } }, { new: true })
@@ -78,81 +78,66 @@ const handlePutBudget = (request, response) => {
     .then(balances => {
       intermediate = pickPropertiesForBudget(intermediate);
       intermediate.budgetPeriods = balances;
-      response.status(200).send(intermediate);
+      return response.status(200).send(intermediate);
     })
     .catch(error => {
-      console.log(error);
+      switch (error.message) {
+        case RESOURCE_NOT_FOUND:
+          return response.status(404).send({ error: RESOURCE_NOT_FOUND });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
     });
 };
 
 const handleDeleteBudget = (request, response) => {
-  let _id = request.params["id"];
-  let loggedInUser = request.loggedInUser;
+  const _id = request.params["id"];
+  const user = extractUser(request);
 
-  Budget.findOne({ _id })
+  Budget.findOne({ _id, user })
     .then(budget => {
-      if (!budget.user.equals(loggedInUser._id)) response.status(403).send();
+      if (!budget) return Promise.reject({ message: RESOURCE_NOT_FOUND });
       return budget.remove();
     })
     .then(() => {
-      response.status(200).send();
+      return response.status(200).send();
     })
-    .catch(error => {});
+    .catch(error => {
+      switch (error.message) {
+        case RESOURCE_NOT_FOUND:
+          return response.status(404).send({ error: RESOURCE_NOT_FOUND });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
+    });
 };
+
 const handleGetBudget = (request, response) => {
-  let tosen;
-  Budget.findOne({ _id: request.params["id"] })
+  const _id = request.params["id"];
+  const user = extractUser(request);
+
+  let intermediate;
+  
+  Budget.findOne({ _id, user })
     .then(budget => {
-      if (request.loggedInUser._id !== budget.user.toString())
-        return response.sendStatus(403);
-      tosen = budget;
-      console.log(budget.budgetPeriods);
+      if (!budget) return Promise.reject({ message: RESOURCE_NOT_FOUND });
+      intermediate = budget;
       return budget.balances();
     })
     .then(balances => {
-      console.log("balance:", balances);
-
-      // console.log(_.pick(budget, ["name", "budgetPeriods"]));
-
-      return response.status(200).send({});
+      intermediate = pickPropertiesForBudget(intermediate);
+      intermediate.budgetPeriods = balances;
+      return response.status(200).send(intermediate);
     })
-    .catch(() => response.sendStatus(404));
+    .catch(() => {
+      switch (error.message) {
+        case RESOURCE_NOT_FOUND:
+          return response.status(404).send({ error: RESOURCE_NOT_FOUND });
+        default:
+          return response.status(500).send({ error: SERVER_ERROR });
+      }
+    });
 };
-
-//   if (request.loggedInUser._id !== budget.user.toString())
-//     return response.sendStatus(403);
-//
-//   // Budget.findOneAndUpdate({_id: request.body._id}, {$set: {name: request.body.name }  }, {new: true})
-//   //   .then()
-//
-//
-// app.put(`/api/budgetPeriod`, authMiddleWare, (request, response) => {
-//   if (request.loggedInUser._id !== budget.user.toString())
-//     return response.sendStatus(403);
-//
-//   // Budget.findOneAndUpdate({_id: request.body._id, budgetPeriods._id: request.body.budgetPeriod._id}, {$set: {name: request.body.name } }, {new: true})
-//   //   .then()
-// });
-//
-
-// app.delete('/api/budget/:id', authMiddleWare, (request, response)=>{
-//
-//   let _id = request.params['id'];
-//   let loggedInUser = request.loggedInUser;
-//
-//   Budget.findOne({ _id })
-//     .then(budget => {
-//         if(!budget.user.equals(loggedInUser._id))
-//           response.status(403).send();
-//         return budget.remove();
-//     })
-//     .then(() => {
-//       response.status(200).send();
-//     })
-//     .catch(error => {
-//
-//     });
-// });
 
 module.exports = {
   handlePostBudget,

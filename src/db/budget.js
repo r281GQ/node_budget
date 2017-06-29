@@ -18,7 +18,7 @@ let BudgetPeriodSchema = new Schema({
 });
 
 let BudgetSchema = new Schema({
-  defaultAllowance:{
+  defaultAllowance: {
     type: Number,
     required: true
   },
@@ -58,71 +58,130 @@ const calculateSum = (extendedBudgetPeriods, bp) => {
   return extendedBudgetPeriods;
 };
 
+BudgetSchema.methods.createInitialBudgetPeriods = function(startingMonth) {
+  return new Promise((resolve, reject) => {
+    let now = moment().valueOf();
+    let monthsToCreate = [];
+
+    if (startingMonth)
+      while (!moment(startingMonth).isSame(now, "month")) {
+        monthsToCreate.push(startingMonth);
+        startingMonth = moment(startingMonth).add(1, "M");
+      }
+
+    monthsToCreate.push(now);
+    let budgetPeriods = _.map(monthsToCreate, month => ({
+      month,
+      allowance: this.defaultAllowance
+    }));
+
+    this.budgetPeriods = budgetPeriods;
+    this.save().then(budget => resolve(budget)).catch(error => reject(error));
+  });
+};
+
+BudgetSchema.methods.assignBudgetPeriod = function(month) {
+  return new Promise((resolve, reject) => {
+    if (!month) reject();
+
+    let firstPeriod = _.first(_.sortBy(this.budgetPeriods, ["month"]));
+
+    if (
+      !_.find(this.budgetPeriods, bp =>
+        moment(bp.month).isSame(moment(month), "M")
+      )
+    ) {
+      while (!moment(month).isSame(firstPeriod.month, "month")) {
+        this.budgetPeriods.push({ month, allowance: this.defaultAllowance });
+        month = moment(month).add(1, "M");
+      }
+      this.save().then(budget => resolve(budget)).catch(error => reject(error));
+    } else {
+      resolve(this);
+    }
+  });
+};
+
 BudgetSchema.methods.balances = function() {
   let Transaction = mongoose.model("Transaction");
   let budget = this;
   let bps = budget.budgetPeriods;
   return new Promise((resolve, reject) => {
     Transaction.find({ budget })
-    .then(transactions => {
-      let array = _.map(bps, bp =>
-        _.extend({}, _.pick(bp, ['_id',"allowance", "month"]), {
-          monthlyBalance:
-            _.reduce(
-              _.map(
-                _.filter(budget.budgetPeriods, bpToFilter =>
-                  moment(bpToFilter.month).isSame(
-                    moment(bp.month, "DD-MM-YYYY"),
-                    "month"
-                  )
-                ),
-                bpToMap => bpToMap.allowance
-              ),
-              (sum, allowance) => sum + allowance,
-              0
-            ) -
+      .then(transactions => {
+        let array = _.map(bps, bp =>
+          _.extend({}, _.pick(bp, ["_id", "allowance", "month"]), {
+            monthlyBalance:
               _.reduce(
-                _.filter(transactions, transaction =>
-                  moment(transaction.date).isSame(
-                    moment(bp.month, "DD-MM-YYYY"),
-                    "month"
-                  )
+                _.map(
+                  _.filter(
+                    budget.budgetPeriods,
+                    bpToFilter =>
+                      // moment(bpToFilter.month).isSame(
+                      //   moment(bp.month, "DD-MM-YYYY"),
+                      //   "month"
+                      // )
+                      moment(bpToFilter.month).format("MM-YYYY") ===
+                      moment(bp.month).format("MM-YYYY")
+                  ),
+                  bpToMap => bpToMap.allowance
                 ),
-                (sum, transaction) => sum + transaction.amount,
+                (sum, allowance) => sum + allowance,
                 0
-              )
-        })
-      );
-      let calculatedArray = _.reduce(_.sortBy(array, ["month"]), calculateSum, []);
-      resolve(_.keyBy(calculatedArray, '_id'));
-    })
-    .catch(error => {
-      reject(error);
-    });
+              ) -
+                _.reduce(
+                  _.filter(
+                    transactions,
+                    transaction =>
+                      // moment(transaction.date).isSame(
+                      //   moment(bp.month, "DD-MM-YYYY"),
+                      //   "month"
+                      // )
+                      moment(transaction.date).format("MM-YYYY") ===
+                      moment(bp.month).format("MM-YYYY")
+                  ),
+                  (sum, transaction) => sum + transaction.amount,
+                  0
+                )
+          })
+        );
+        let calculatedArray = _.reduce(
+          _.sortBy(array, ["month"]),
+          calculateSum,
+          []
+        );
+        resolve(_.keyBy(calculatedArray, "_id"));
+      })
+      .catch(error => {
+        reject(error);
+      });
   });
 };
 
-BudgetSchema.pre('save', function(next){
-  let budget = this;
-  let currentDate = moment();
-  let monthsNumbers = [1,2,3,4,5,6,7,8,9,10,11,12];
-  let arrayOfDate = _.reduce(monthsNumbers, (sum, monthnumber) => {
-    let last=_.last(sum);
-    if(!last){
-      let init = moment();
-      sum.push({month: init, allowance: this.defaultAllowance});
-    }else{
-      cloend = _.cloneDeep(last.month);
-      let g = moment(cloend).add(1, 'M');
-      sum.push({month: g, allowance: this.defaultAllowance});
-
-    }
-
-    return sum;
-  }, [] );
-  this.budgetPeriods = arrayOfDate;
-  next();
-});
+// BudgetSchema.pre("save", function(next) {
+//   let budget = this;
+//   let currentDate = moment();
+//   let monthsNumbers = [1, 2, 3, 4, 5, 6];
+//   let arrayOfDate = _.reduce(
+//     monthsNumbers,
+//     (sum, monthNumber) => {
+//       let last = _.last(sum);
+//       if (!last) {
+//         let init = moment();
+//         sum.push({ month: init, allowance: this.defaultAllowance });
+//       } else {
+//         let cloned = _.cloneDeep(last.month);
+//         let nextMonth = moment(cloned).add(1, "M");
+//         sum.push({ month: nextMonth, allowance: this.defaultAllowance });
+//       }
+//
+//       return sum;
+//     },
+//     []
+//   );
+//   this.budgetPeriods = arrayOfDate;
+//   next();
+// });
 
 BudgetSchema.pre("remove", function(next) {
   let Transaction = mongoose.model("Transaction");

@@ -28,7 +28,7 @@ const getToken = (app, callback) => {
     });
 };
 
-describe("endpoints", () => {
+describe("Account handler", () => {
   afterEach(done => {
     Transaction.remove({})
       .then(() =>
