@@ -3,7 +3,7 @@ const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
 const _ = require("lodash");
 const cors = require("cors");
-const hash = require('password-hash');
+const hash = require("password-hash");
 
 const { mongoose } = require("./db/mongooseConfig");
 const { modelRoutes } = require("./../src/routes/routes");
@@ -17,6 +17,8 @@ const {
 } = require("./db/models");
 const secret = require("./misc/secrets");
 const { ID_INVALID_OR_NOT_PRESENT } = require("./misc/errors");
+
+const PORT = process.env.PORT || 2000;
 
 const BASE_URL = "/api/";
 const corsConfig = {
@@ -52,7 +54,11 @@ app.get("/api/whoAmI", (request, response) => {
 app.post("/api/signUp", (request, response) => {
   let { name, email, password } = request.body;
 
-  const cryptedPassword = hash.generate(password, {algorithm:'sha256',saltLength: 8,iterations: 4});
+  const cryptedPassword = hash.generate(password, {
+    algorithm: "sha256",
+    saltLength: 8,
+    iterations: 4
+  });
 
   let user = new User({
     name,
@@ -97,8 +103,8 @@ app.post("/api/logIn", (request, response) => {
 
 app.use(`${BASE_URL}`, modelRoutes);
 
-app.listen(2000, () => {
-  console.log("Server running on port: " + 2000);
+app.listen(PORT, () => {
+  console.log("Server running on port: " + PORT);
 });
 
 module.exports = { app };

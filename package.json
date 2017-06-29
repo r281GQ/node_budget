@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "serve": "NODE_ENV=DEVELOPMENT nodemon src/index.js",
-    "test": "NODE_ENV=TEST nodemon --exec 'mocha  --recursive test/**/**.test.js'"
+    "serve": "NODE_ENV=DEVELOPMENT nodemon src/server.js",
+    "test": "NODE_ENV=TEST nodemon --exec 'mocha  --recursive test/**/**.test.js'",
+    "start": "node src/server.js"
   },
   "author": "Endre Vegh",
   "license": "ISC",
