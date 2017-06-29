@@ -167,42 +167,6 @@ const handlePutEquity = (request, response) => {
     });
 };
 
-//
-// app.post("/api/equities", authMiddleWare, (req, res) => {
-//   let { name, type, initialBalance, currency } = req.body;
-//   // console.log(name, type);
-//   let equity = new Equity({
-//     name,
-//     type,
-//     initialBalance,
-//     currency
-//   });
-//
-//   let rawEq;
-//
-//   equity.user = req.loggedInUser._id;
-//   // console.log('equity');
-//   equity
-//     .save()
-//     .then(eq => {
-//       rawEq = eq;
-//       return eq.currentBalance();
-//     })
-//     .then(currentBalance => {
-//       let f = _.pick(rawEq, ["name", "type", "_id", "user", "initialBalance"]);
-//
-//       f.currentBalance = currentBalance;
-//
-//       return res.status(201).send(f);
-//     })
-//     .catch(error => {
-//       if (_.includes(error.message, "Equity validation failed"))
-//         return res.status(409).send({ message: "field validation failed" });
-//
-//       return res.sendStatus(500);
-//     });
-// });
-
 module.exports = {
   handlePostEquity,
   handleGetAllEquities,
